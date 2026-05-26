@@ -846,11 +846,40 @@
           </div>
           <div class="card">
             <div class="card-title"><i class="fa-solid fa-user-tie" style="color:var(--accent)"></i> 马龙标准动作</div>
-            <div class="motion-video-container">
-              <canvas id="standard-canvas"></canvas>
-              <div class="motion-video-placeholder" id="standard-placeholder">
-                <i class="fa-solid fa-user"></i>
-                <span>选择动作后显示标准骨骼</span>
+            <!-- Tab 切换：骨骼 / 视频 -->
+            <div style="display:flex;gap:0;margin-bottom:12px;background:rgba(255,255,255,0.05);border-radius:10px;padding:3px">
+              <button id="tab-standard-skeleton" class="btn" style="flex:1;border-radius:8px;background:var(--primary);color:#fff;font-size:13px;padding:7px 0" onclick="switchStandardTab('skeleton')"><i class="fa-solid fa-bone"></i> 标准骨骼</button>
+              <button id="tab-standard-video" class="btn" style="flex:1;border-radius:8px;background:transparent;color:var(--text-secondary);font-size:13px;padding:7px 0" onclick="switchStandardTab('video')"><i class="fa-solid fa-play"></i> 示范视频</button>
+            </div>
+            <!-- 骨骼面板 -->
+            <div id="standard-skeleton-panel">
+              <div class="motion-video-container">
+                <canvas id="standard-canvas"></canvas>
+                <div class="motion-video-placeholder" id="standard-placeholder">
+                  <i class="fa-solid fa-user"></i>
+                  <span>选择动作后显示标准骨骼</span>
+                </div>
+              </div>
+            </div>
+            <!-- 视频面板 -->
+            <div id="standard-video-panel" style="display:none">
+              <div class="motion-video-container" style="position:relative">
+                <iframe id="standard-video-iframe" src="" frameborder="0" allowfullscreen
+                  style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:var(--radius);display:none"
+                  loading="lazy"></iframe>
+                <div class="motion-video-placeholder" id="standard-video-placeholder" style="z-index:2">
+                  <i class="fa-solid fa-film" style="font-size:48px;opacity:0.3;display:block"></i>
+                  <span style="font-size:14px">选择动作后观看示范视频</span>
+                  <p style="font-size:11px;color:rgba(255,255,255,0.25);margin:4px 0 0">来自 YouTube 马龙技术教学</p>
+                </div>
+              </div>
+              <div id="standard-video-info" style="margin-top:10px;display:none">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                  <i class="fa-solid fa-circle-play" style="color:#FF0000;font-size:14px"></i>
+                  <span id="standard-video-title" style="font-size:13px;font-weight:600;color:var(--text-primary)"></span>
+                  <a id="standard-video-link" href="#" target="_blank" style="font-size:11px;color:#007AFF;text-decoration:none;margin-left:auto"><i class="fa-brands fa-youtube"></i> 在 YouTube 打开</a>
+                </div>
+                <p id="standard-video-desc" style="font-size:12px;color:var(--text-secondary);line-height:1.5"></p>
               </div>
             </div>
             <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);line-height:1.6" id="standard-desc">
@@ -1165,6 +1194,119 @@ const JOINT_ANGLE_MAP = [
   { jointId: 'right_knee', jointName: '右膝', a: 26, b: 28, c: 24, weight: 0.20, dimension: 'knee' },
   { jointId: 'left_knee', jointName: '左膝', a: 25, b: 27, c: 23, weight: 0.20, dimension: 'knee' },
 ];
+
+// ========== MALONG VIDEO REFERENCE ==========
+// YouTube 视频：马龙完整技术展示 (ddVkXRh1UeY) — 每个动作截取 10 秒示范片段
+const MALONG_VIDEO_MAP = {
+  // 来源视频: https://www.youtube.com/watch?v=ddVkXRh1UeY
+  // "Ma Long's Complete Technique" — 马龙亲自演示，中国教练解说
+  forehand_attack: {
+    videoId: 'ddVkXRh1UeY', start: 671, end: 681,
+    title: '正手攻球 (Forehand Drive)',
+    desc: '马龙展示正手攻球标准动作：蹬地转腰、前臂快收、击球点高而前。注意观察他的引拍幅度和击球瞬间身体重心转移。',
+  },
+  backhand_attack: {
+    videoId: 'ddVkXRh1UeY', start: 897, end: 907,
+    title: '反手攻球 (Backhand Drive)',
+    desc: '马龙展示反手攻球技术：身体正对球台、前臂外旋发力、肘部稳定。注意手腕的弹击时机和击球后随挥动作。',
+  },
+  forehand_loop_topspin: {
+    videoId: 'ddVkXRh1UeY', start: 1889, end: 1899,
+    title: '正手下旋拉球 (FH Loop vs Backspin)',
+    desc: '马龙演示拉下旋球技术：降低重心、向上发力摩擦、制造强上旋。注意引拍时沉肩和触球部位为球的下半部。',
+  },
+  backhand_loop_topspin: {
+    videoId: 'ddVkXRh1UeY', start: 2335, end: 2345,
+    title: '反手下旋拉球 (BH Loop vs Backspin)',
+    desc: '马龙展示反手拉下旋球：前臂外旋、手腕弹击摩擦。注意台内反手拉球时的站位调整和拍面角度控制。',
+  },
+  forehand_push: {
+    videoId: 'ddVkXRh1UeY', start: 1424, end: 1434,
+    title: '正手搓球 (Forehand Push)',
+    desc: '马龙演示正手搓球控制技术：板面后仰、切球底部、控制弧线低平。注意手指对拍面的精细控制和落点意识。',
+  },
+  backhand_push: {
+    videoId: 'ddVkXRh1UeY', start: 1500, end: 1510,
+    title: '反手搓球 (Backhand Push)',
+    desc: '马龙展示反手搓球：肘部前顶、手腕切球、控制落点精准。注意搓球时重心的稳定性和板型微调技巧。',
+  },
+  forehand_flick: {
+    videoId: 'ddVkXRh1UeY', start: 1582, end: 1592,
+    title: '正手挑打 (FH Flick/Flip)',
+    desc: '马龙演示正手挑打技术：上步到位、手腕弹击、快速收前臂。注意上步节奏和触球瞬间的爆发力释放。',
+  },
+  backhand_flick_advanced: {
+    videoId: 'ddVkXRh1UeY', start: 1574, end: 1584,
+    title: '反手挑打 (BH Flip)',
+    desc: '马龙展示反手拧拉/翻挑技术：反手位上步、手腕快速翻转弹击。这是现代乒乓球接发球的核心技术之一。',
+  },
+  footwork_forward_back: {
+    videoId: 'ddVkXRh1UeY', start: 3025, end: 3035,
+    title: '前后移动步伐 (In-Out Footwork)',
+    desc: '马龙演示前后步法：上步迎前到位快、退步还原重心稳。注意滑步衔接流畅性和重心转换速度。',
+  },
+  footwork_side_to_side: {
+    videoId: 'ddVkXRh1UeY', start: 2670, end: 2680,
+    title: '左右移动步伐 (Lateral Footwork)',
+    desc: '马龙展示左右横移步法：滑步衔接流畅、重心转换迅速。观察他如何用并步和跨步在近台快速切换位置。',
+  },
+  serve: {
+    videoId: 'ddVkXRh1UeY', start: 62, end: 72,
+    title: '发球技术 (Serve)',
+    desc: '马龙展示发球技术：抛球高度稳定、触球瞬间手腕爆发力强。同一动作发出不同旋转变化，是马龙发球的核心特点。',
+  },
+  backhand_flick: {
+    videoId: 'ddVkXRh1UeY', start: 897, end: 907,
+    title: '反手拨球 (Backhand Block/Drive)',
+    desc: '马龙展示反手拨球技术：站位近台、前臂外旋、借力发力。注意拨球时的减力控制和线路选择。',
+  },
+};
+
+let _currentStandardTab = 'skeleton';
+
+function switchStandardTab(tab) {
+  _currentStandardTab = tab;
+  const skelBtn = document.getElementById('tab-standard-skeleton');
+  const vidBtn = document.getElementById('tab-standard-video');
+  const skelPanel = document.getElementById('standard-skeleton-panel');
+  const vidPanel = document.getElementById('standard-video-panel');
+  if (tab === 'skeleton') {
+    skelBtn.style.background = 'var(--primary)'; skelBtn.style.color = '#fff';
+    vidBtn.style.background = 'transparent'; vidBtn.style.color = 'var(--text-secondary)';
+    skelPanel.style.display = ''; vidPanel.style.display = 'none';
+  } else {
+    vidBtn.style.background = 'var(--primary)'; vidBtn.style.color = '#fff';
+    skelBtn.style.background = 'transparent'; skelBtn.style.color = 'var(--text-secondary)';
+    vidPanel.style.display = ''; skelPanel.style.display = 'none';
+    // Load video for current selection
+    if (motionCompareUI && motionCompareUI.selectedMotion) {
+      loadStandardVideo(motionCompareUI.selectedMotion);
+    }
+  }
+}
+
+function loadStandardVideo(motionKey) {
+  const vinfo = MALONG_VIDEO_MAP[motionKey];
+  if (!vinfo) return;
+  const iframe = document.getElementById('standard-video-iframe');
+  const placeholder = document.getElementById('standard-video-placeholder');
+  const infoPanel = document.getElementById('standard-video-info');
+
+  // Build YouTube embed URL with start time
+  const embedUrl = 'https://www.youtube.com/embed/' + vinfo.videoId +
+    '?start=' + vinfo.start + '&end=' + vinfo.end +
+    '&autoplay=0&rel=0&modestbranding=1&playsinline=1&controls=1';
+
+  iframe.src = embedUrl;
+  iframe.style.display = '';
+  placeholder.style.display = 'none';
+  infoPanel.style.display = '';
+
+  document.getElementById('standard-video-title').textContent = vinfo.title;
+  document.getElementById('standard-video-desc').textContent = vinfo.desc;
+  document.getElementById('standard-video-link').href =
+    'https://www.youtube.com/watch?v=' + vinfo.videoId + '&t=' + vinfo.start + 's';
+}
 
 // ========== LOCAL STORAGE ==========
 function getRecords() { try { return JSON.parse(localStorage.getItem('pp_records')) || defaultRecords; } catch(e) { return defaultRecords; } }
@@ -1823,6 +1965,10 @@ class MotionCompareUI {
       document.getElementById('standard-desc').textContent = motion.desc;
       document.getElementById('standard-placeholder').style.display = 'none';
       this._drawStandardSkeleton(motion);
+      // Also load video if on video tab
+      if (_currentStandardTab === 'video') {
+        loadStandardVideo(key);
+      }
     }
   }
 
