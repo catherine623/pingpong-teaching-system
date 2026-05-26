@@ -813,11 +813,18 @@
               <button class="btn btn-primary" id="btn-camera" onclick="motionCompareUI.toggleCamera()">
                 <i class="fa-solid fa-camera"></i> 开启摄像头
               </button>
+              <label class="btn btn-success" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:8px 14px;border-radius:10px;border:none;background:var(--success);color:white;font-weight:600;font-family:inherit">
+                <i class="fa-solid fa-upload"></i> 上传视频
+                <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/*" style="display:none" onchange="motionCompareUI.handleVideoUpload(event)" />
+              </label>
               <button class="btn btn-accent" id="btn-record" onclick="motionCompareUI.startRecording()" disabled>
                 <i class="fa-solid fa-circle"></i> 开始录制
               </button>
               <button class="btn btn-danger" id="btn-stop" onclick="motionCompareUI.stopRecording()" style="display:none">
                 <i class="fa-solid fa-stop"></i> 停止录制
+              </button>
+              <button class="btn btn-outline" id="btn-analyze-video" onclick="motionCompareUI.analyzeUploadedVideo()" style="display:none">
+                <i class="fa-solid fa-magnifying-glass-chart"></i> 分析视频
               </button>
               <button class="btn btn-outline" id="btn-realtime-compare" onclick="motionCompareUI.toggleRealtimeCompare()">
                 <i class="fa-solid fa-arrows-left-right"></i> 实时对比
@@ -825,6 +832,16 @@
               <button class="btn btn-outline" id="btn-split-view" onclick="motionCompareUI.showSplitView()">
                 <i class="fa-solid fa-columns"></i> 分屏对比
               </button>
+            </div>
+            <!-- 视频分析进度条 -->
+            <div id="video-analysis-progress" style="display:none;margin-top:12px">
+              <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;display:flex;justify-content:space-between">
+                <span><i class="fa-solid fa-spinner fa-spin" style="margin-right:4px"></i>正在逐帧分析视频...</span>
+                <span id="video-progress-text">0%</span>
+              </div>
+              <div style="width:100%;height:4px;background:var(--bg-tertiary);border-radius:2px;overflow:hidden">
+                <div id="video-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--primary),var(--accent));border-radius:2px;transition:width 0.15s;width:0%"></div>
+              </div>
             </div>
           </div>
           <div class="card">
@@ -1454,6 +1471,83 @@ class MotionRecorder {
   }
 }
 
+// ========== VIDEO UPLOADER — 上传视频分析 ==========
+class VideoUploader {
+  constructor() {
+    this.videoEl = null;
+    this.poseLandmarker = null;
+    this.isAnalyzing = false;
+    this.onProgress = null;
+    this.onComplete = null;
+  }
+
+  async loadPoseModel() {
+    if (this.poseLandmarker) return;
+    try {
+      showToast('正在加载 AI 模型...', '');
+      const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14');
+      const { PoseLandmarker, FilesetResolver } = vision;
+      const filesetResolver = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+      this.poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+        runningMode: 'VIDEO',
+        numPoses: 1,
+        minPoseDetectionConfidence: 0.5,
+        minPosePresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+      showToast('AI 模型加载完成', 'success');
+    } catch (err) {
+      console.error('MediaPipe 加载失败:', err);
+      throw new Error('AI 模型加载失败: ' + err.message);
+    }
+  }
+
+  async analyzeVideo(videoElement, onProgress) {
+    if (!this.poseLandmarker) await this.loadPoseModel();
+    this.isAnalyzing = true;
+
+    const video = videoElement;
+    const frames = [];
+    const totalFrames = Math.floor(video.duration * 15); // ~15fps
+    const sampleInterval = 1 / 15; // 每 ~66ms 取一帧
+    let currentTime = 0;
+
+    while (currentTime <= video.duration && this.isAnalyzing) {
+      video.currentTime = currentTime;
+      // 等待 seek 完成
+      await new Promise(resolve => {
+        video.onseeked = () => resolve();
+        setTimeout(resolve, 500); // 超时保护
+      });
+
+      if (video.readyState >= 2) {
+        try {
+          const result = this.poseLandmarker.detectForVideo(video, performance.now());
+          if (result.landmarks && result.landmarks.length > 0) {
+            frames.push({
+              landmarks: result.landmarks[0].map(lm => ({ ...lm })),
+              timestamp: currentTime * 1000
+            });
+          } else {
+            frames.push({ landmarks: null, timestamp: currentTime * 1000 });
+          }
+        } catch(e) {
+          frames.push({ landmarks: null, timestamp: currentTime * 1000 });
+        }
+      }
+
+      currentTime += sampleInterval;
+      const progress = Math.min(Math.round((currentTime / video.duration) * 100), 100);
+      if (onProgress) onProgress(progress);
+    }
+
+    this.isAnalyzing = false;
+    return frames;
+  }
+
+  cancel() { this.isAnalyzing = false; }
+}
+
 // ========== MOTION ANALYZER ==========
 class MotionAnalyzer {
   calculateJointAngle(a, b, c) {
@@ -1585,10 +1679,12 @@ class MotionCompareUI {
     this.recorder = new MotionRecorder();
     this.analyzer = new MotionAnalyzer();
     this.adviceEngine = new AdviceEngine();
+    this.videoUploader = new VideoUploader();
     this.selectedMotion = 'forehand_attack';
     this.lastCompareResult = null;
     this.isRealtimeCompare = false;
     this._trendChartInstance = null;
+    this._uploadedVideoEl = null;
     this._bindEvents();
     this._renderMotionSelector();
   }
@@ -1712,6 +1808,155 @@ class MotionCompareUI {
   toggleCamera() {
     if (this.camera.isRunning) { this.camera.close(); }
     else { this.camera.init(); }
+  }
+
+  // ========== 视频上传分析 ==========
+  handleVideoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    // 验证文件类型
+    const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/avi', 'video/mov'];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(mp4|webm|mov|avi)$/i)) {
+      showToast('请上传 MP4/WebM/MOV 格式的视频文件', 'error');
+      event.target.value = '';
+      return;
+    }
+    // 文件大小限制 200MB
+    if (file.size > 200 * 1024 * 1024) {
+      showToast('视频文件不能超过 200MB', 'error');
+      event.target.value = '';
+      return;
+    }
+    showToast(`已选择: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`, '');
+    this._loadVideoFile(file);
+  }
+
+  _loadVideoFile(file) {
+    // 关闭摄像头
+    if (this.camera.isRunning) this.camera.close();
+
+    const videoContainer = document.getElementById('video-container');
+    // 移除旧的上传视频元素
+    const oldUploadVid = document.getElementById('uploaded-video');
+    if (oldUploadVid) oldUploadVid.remove();
+
+    // 创建新的 video 元素
+    const video = document.createElement('video');
+    video.id = 'uploaded-video';
+    video.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1';
+    video.controls = true; video.loop = false; video.muted = true; video.playsInline = true;
+    video.preload = 'auto';
+
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    this._uploadedVideoEl = video;
+
+    video.onloadedmetadata = () => {
+      videoContainer.appendChild(video);
+      document.getElementById('camera-video').style.display = 'none';
+      document.getElementById('video-placeholder').style.display = 'none';
+      document.getElementById('pose-canvas').style.zIndex = '3';
+      // 显示分析按钮
+      document.getElementById('btn-analyze-video').style.display = 'inline-flex';
+      const durStr = `${Math.floor(video.duration / 60)}:${String(Math.floor(video.duration % 60)).padStart(2,'0')}`;
+      showToast(`视频就绪! 时长 ${durStr}，点击「分析视频」开始 AI 分析`, 'success');
+    };
+
+    video.onerror = () => {
+      showToast('视频加载失败，请检查文件格式', 'error');
+      URL.revokeObjectURL(url);
+    };
+  }
+
+  async analyzeUploadedVideo() {
+    if (!this._uploadedVideoEl) { showToast('请先上传视频', 'error'); return; }
+    const motion = MALONG_STANDARD_DATA[this.selectedMotion];
+    if (!motion) { showToast('请先选择一个对比动作', 'error'); return; }
+
+    const btnAnalyze = document.getElementById('btn-analyze-video');
+    const progressPanel = document.getElementById('video-analysis-progress');
+    const progressBar = document.getElementById('video-progress-bar');
+    const progressText = document.getElementById('video-progress-text');
+
+    btnAnalyze.disabled = true;
+    btnAnalyze.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 分析中...';
+    progressPanel.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressText.textContent = '0%';
+
+    try {
+      // 播放视频确保可以读取帧
+      this._uploadedVideoEl.muted = true;
+      await this._uploadedVideoEl.play().catch(() => {});
+      this._uploadedVideoEl.pause();
+
+      const frames = await this.videoUploader.analyzeVideo(this._uploadedVideoEl, (pct) => {
+        progressBar.style.width = pct + '%';
+        progressText.textContent = pct + '%';
+      });
+
+      // 过滤掉没有检测到骨骼的帧
+      const validFrames = frames.filter(f => f.landmarks !== null);
+      if (validFrames.length < 5) {
+        showToast(`检测到的有效帧不足 (${validFrames.length}帧)，请确保视频中人物全身可见`, 'error');
+        progressPanel.style.display = 'none'; return;
+      }
+
+      // 提取关键帧（与录制分析相同的逻辑）
+      const phases = ['ready', 'backswing', 'hit', 'follow_through', 'recovery'];
+      const boundaries = [0, 0.15, 0.35, 0.55, 0.75];
+      const userKeyFrames = [];
+      for (let i = 0; i < 5; i++) {
+        const start = Math.floor(boundaries[i] * validFrames.length);
+        const end = i < 4 ? Math.floor(boundaries[i + 1] * validFrames.length) : validFrames.length;
+        const mid = Math.min(Math.floor((start + end) / 2), validFrames.length - 1);
+        userKeyFrames.push({ phase: phases[i], frameIndex: mid, landmarks: validFrames[mid].landmarks });
+      }
+
+      // 运行对比分析
+      const result = this.analyzer.analyze(userKeyFrames, motion.keyFrames, motion.name);
+      result.advices = this.adviceEngine.generateAdvices(result);
+      result.source = 'video_upload';
+      result.videoFrameCount = validFrames.length;
+      this.lastCompareResult = result;
+
+      // 在视频上绘制最终检测的骨骼
+      this._drawUploadedVideoSkeleton(validFrames[Math.floor(validFrames.length * 0.5)]);
+
+      // 保存历史
+      const history = getMotionHistory();
+      history.unshift({
+        id: 'h' + Date.now(), motionName: result.motionName,
+        overallScore: result.overallScore, dimensionScores: result.dimensionScores,
+        timestamp: result.timestamp, source: '视频上传'
+      });
+      saveMotionHistory(history);
+
+      this._renderCompareResult(result);
+      this._renderHistoryList();
+      this._renderTrendChart();
+      progressPanel.style.display = 'none';
+      showToast(`分析完成！共处理 ${validFrames.length} 帧，综合评分: ${result.overallScore}`, 'success');
+
+    } catch(err) {
+      console.error('视频分析失败:', err);
+      showToast('视频分析失败: ' + err.message, 'error');
+      progressPanel.style.display = 'none';
+    } finally {
+      btnAnalyze.disabled = false;
+      btnAnalyze.innerHTML = '<i class="fa-solid fa-magnifying-glass-chart"></i> 分析视频';
+    }
+  }
+
+  _drawUploadedVideoSkeleton(frameData) {
+    if (!frameData || !frameData.landmarks) return;
+    const canvas = document.getElementById('pose-canvas');
+    const container = document.getElementById('video-container');
+    const ctx = canvas.getContext('2d');
+    canvas.width = container.clientWidth || 640;
+    canvas.height = container.clientHeight || 480;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawSkeleton(ctx, frameData.landmarks, canvas.width, canvas.height, {});
   }
 
   startRecording() {
