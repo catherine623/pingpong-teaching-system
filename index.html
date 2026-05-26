@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>乒乓球 AI 教学系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #007AFF;
+      --primary-light: #4DA3FF;
+      --primary-dark: #0056CC;
+      --accent: #5856D6;
+      --accent-light: #7B79E0;
+      --success: #30D158;
+      --warning: #FF9F0A;
+      --danger: #FF453A;
+      --bg: #000000;
+      --bg-secondary: #1C1C1E;
+      --bg-tertiary: #2C2C2E;
+      --card: rgba(28, 28, 30, 0.8);
+      --card-solid: #1C1C1E;
+      --text: #FFFFFF;
+      --text-secondary: rgba(255,255,255,0.7);
+      --text-muted: rgba(255,255,255,0.5);
+      --border: rgba(255,255,255,0.1);
+      --border-light: rgba(255,255,255,0.05);
+      --glass: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.12);
+      --sidebar-w: 240px;
+      --radius-sm: 8px;
+      --radius: 16px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      --shadow: 0 2px 20px rgba(0,0,0,0.3);
+      --shadow-hover: 0 8px 40px rgba(0,122,255,0.15);
+      --shadow-float: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: var(--sidebar-w);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      background: rgba(28,28,30,0.85);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      z-index: 100;
+      transition: transform 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .sidebar-logo { padding: 28px 20px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .sidebar-logo .logo-icon {
+      font-size: 28px;
+      display: flex; align-items: center; justify-content: center;
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      margin-bottom: 10px;
+      color: white;
+    }
+    .sidebar-logo .logo-icon i { font-size: 18px; }
+    .sidebar-logo h1 { font-size: 15px; font-weight: 700; line-height: 1.3; }
+    .sidebar-logo p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+    .nav-section-title {
+      font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+      color: var(--text-muted); text-transform: uppercase;
+      padding: 12px 20px 6px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 20px; cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+      font-size: 14px; font-weight: 400;
+      color: var(--text-secondary); position: relative;
+    }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+    .nav-item.active { color: var(--text); background: rgba(0,122,255,0.2); font-weight: 600; }
+    .nav-item.active::before {
+      content: ''; position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px; background: var(--primary);
+      border-radius: 0 2px 2px 0;
+    }
+    .nav-item i { width: 18px; text-align: center; font-size: 15px; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .user-card { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; flex-shrink: 0; color: white;
+    }
+    .user-info p { font-size: 13px; font-weight: 600; }
+    .user-info span { font-size: 11px; color: var(--text-muted); }
+
+    /* MAIN */
+    .main {
+      margin-left: var(--sidebar-w); flex: 1;
+      display: flex; flex-direction: column; min-height: 100vh; background: var(--bg);
+    }
+    .topbar {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(0,0,0,0.7);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 0 28px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-title { font-size: 17px; font-weight: 700; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .btn {
+      padding: 8px 18px; border-radius: 10px; border: none;
+      cursor: pointer; font-size: 13px; font-weight: 600;
+      font-family: inherit;
+      transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,122,255,0.4); }
+    .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--text); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-accent { background: var(--accent); color: white; }
+    .content { padding: 28px; flex: 1; }
+
+    /* PAGES */
+    .page { display: none; }
+    .page.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* CARDS */
+    .card {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(28,28,30,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .card:hover { box-shadow: var(--shadow-hover); border-color: rgba(255,255,255,0.12); transform: translateY(-4px); }
+    .card-title {
+      font-size: 14px; font-weight: 700; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    /* GRID */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+
+    /* STAT CARDS */
+    .stat-card {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(28,28,30,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      display: flex; flex-direction: column; gap: 8px;
+      position: relative; overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .stat-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-4px); border-color: rgba(255,255,255,0.12); }
+    .stat-icon {
+      font-size: 22px; width: 48px; height: 48px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stat-icon.blue { background: rgba(0,122,255,0.15); }
+    .stat-icon.orange { background: rgba(255,159,10,0.15); }
+    .stat-icon.green { background: rgba(48,209,88,0.15); }
+    .stat-icon.purple { background: rgba(88,86,214,0.15); }
+    .stat-value { font-size: 32px; font-weight: 900; line-height: 1; }
+    .stat-label { font-size: 13px; color: var(--text-muted); }
+    .stat-change { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 3px; }
+    .stat-change.up { color: var(--success); }
+    .stat-change.down { color: var(--danger); }
+
+    /* WELCOME BANNER */
+    .welcome-banner {
+      background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+      border-radius: var(--radius-lg); padding: 28px;
+      color: white; position: relative; overflow: hidden; margin-bottom: 24px;
+    }
+    .welcome-banner::before {
+      content: ''; position: absolute; right: -30px; top: -30px;
+      width: 160px; height: 160px; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+    }
+    .welcome-banner::after {
+      content: ''; position: absolute; right: 40px; bottom: -20px;
+      width: 100px; height: 100px; border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .welcome-banner h2 { font-size: 22px; font-weight: 900; margin-bottom: 6px; position: relative; z-index: 1; }
+    .welcome-banner p { font-size: 14px; opacity: 0.85; position: relative; z-index: 1; }
+    .welcome-stats { display: flex; gap: 28px; margin-top: 20px; position: relative; z-index: 1; }
+    .welcome-stat { display: flex; flex-direction: column; }
+    .welcome-stat strong { font-size: 24px; font-weight: 900; }
+    .welcome-stat span { font-size: 12px; opacity: 0.7; }
+
+    /* CHART */
+    .chart-container { position: relative; width: 100%; }
+
+    /* ACTIVITY */
+    .activity-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px 0; border-bottom: 1px solid var(--border-light);
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .activity-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+    .activity-dot.orange { background: var(--primary); }
+    .activity-dot.blue { background: var(--accent); }
+    .activity-dot.green { background: var(--success); }
+    .activity-text { font-size: 13px; line-height: 1.5; flex: 1; color: var(--text-secondary); }
+    .activity-text strong { font-weight: 600; color: var(--text); }
+    .activity-time { font-size: 11px; color: var(--text-muted); }
+
+    /* TRAINING CARDS */
+    .training-card {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(28,28,30,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px; margin-bottom: 16px;
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 16px; align-items: start;
+      transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .training-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-4px); border-color: rgba(255,255,255,0.12); }
+    .training-date {
+      text-align: center;
+      background: linear-gradient(135deg, #007AFF, #4DA3FF);
+      color: white; border-radius: 10px;
+      padding: 10px 14px; min-width: 60px;
+    }
+    .training-date .day { font-size: 24px; font-weight: 900; line-height: 1; }
+    .training-date .month { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+    .training-info h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .training-info p { font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+    .training-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--glass); color: var(--text-muted); }
+    .tag.primary { background: rgba(0,122,255,0.15); color: #4DA3FF; }
+    .tag.accent { background: rgba(88,86,214,0.15); color: #7B79E0; }
+    .tag.success { background: rgba(48,209,88,0.15); color: #30D158; }
+    .training-score { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+    /* PROGRESS */
+    .progress-ring { position: relative; display: inline-flex; align-items: center; justify-content: center; }
+    .progress-ring svg { transform: rotate(-90deg); }
+    .progress-ring .ring-value {
+      position: absolute; font-size: 28px; font-weight: 900;
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+    }
+    .score-excellent { color: var(--success); }
+    .score-good { color: var(--primary); }
+    .score-average { color: var(--warning); }
+    .score-poor { color: var(--danger); }
+
+    /* COURSE PLAN */
+    .course-card {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgba(28,28,30,0.6);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      transition: all 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .course-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-4px); border-color: rgba(255,255,255,0.12); }
+    .course-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .course-icon {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .course-title { font-size: 15px; font-weight: 700; }
+    .course-duration { font-size: 12px; color: var(--text-muted); }
+    .course-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.6; }
+    .course-meta { display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      width: 100%; max-width: 520px;
+      max-height: 80vh; overflow-y: auto;
+      box-shadow: var(--shadow-float);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 24px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .modal-header h3 { font-size: 17px; font-weight: 700; }
+    .modal-close {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 18px; padding: 4px;
+      transition: color 0.2s;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-body { padding: 20px 24px 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+    .form-input, .form-select, .form-textarea {
+      width: 100%; padding: 10px 14px;
+      background: var(--bg-tertiary); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-size: 14px; font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+
+    /* TOAST */
+    .toast-container {
+      position: fixed; top: 20px; right: 20px;
+      z-index: 2000; display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      padding: 12px 20px; border-radius: var(--radius-sm);
+      background: var(--bg-secondary); border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text); font-size: 13px; font-weight: 500;
+      box-shadow: var(--shadow-float);
+      animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+      display: flex; align-items: center; gap: 8px;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+    @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(40px); } }
+
+    /* MOTION COMPARE */
+    .motion-compare-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .motion-video-container {
+      position: relative; width: 100%;
+      background: #000; border-radius: var(--radius);
+      overflow: hidden; aspect-ratio: 4/3;
+    }
+    .motion-video-container video, .motion-video-container canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .motion-video-container canvas { z-index: 2; }
+    .motion-video-placeholder {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: var(--text-muted); gap: 12px;
+    }
+    .motion-video-placeholder i { font-size: 48px; opacity: 0.3; }
+    .motion-video-placeholder span { font-size: 14px; }
+
+    .motion-selector-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .motion-category-title {
+      grid-column: 1 / -1;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 8px 0 4px;
+    }
+    .motion-option {
+      padding: 10px 8px; border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer; text-align: center;
+      font-size: 12px; font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+    }
+    .motion-option:hover { background: rgba(0,122,255,0.1); border-color: rgba(0,122,255,0.3); color: var(--text); }
+    .motion-option.active { background: rgba(0,122,255,0.2); border-color: var(--primary); color: var(--primary); font-weight: 700; }
+
+    .motion-controls {
+      display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0;
+    }
+    .motion-controls .btn { font-size: 12px; padding: 8px 14px; }
+    .motion-controls .btn.active { background: var(--accent); border-color: var(--accent); }
+
+    .motion-result-panel { margin-top: 20px; }
+    .motion-score-ring {
+      width: 140px; height: 140px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; margin: 0 auto 20px;
+    }
+    .motion-score-ring .score-number { font-size: 42px; font-weight: 900; }
+    .motion-score-ring .score-label { position: absolute; bottom: 12px; font-size: 11px; color: var(--text-muted); }
+
+    .motion-dimension-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0;
+    }
+    .dim-name { font-size: 13px; width: 60px; color: var(--text-secondary); }
+    .dim-score { font-size: 15px; font-weight: 700; width: 36px; text-align: right; }
+    .dim-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .dim-bar-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+    .motion-joint-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 6px 0; font-size: 12px;
+    }
+    .motion-joint-name { width: 50px; font-weight: 600; font-size: 12px; }
+    .motion-joint-angles { color: var(--text-muted); font-size: 11px; flex: 1; }
+    .motion-joint-bar { width: 80px; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+    .motion-joint-bar-fill { height: 100%; border-radius: 2px; }
+    .motion-joint-bar-fill.good { background: var(--success); }
+    .motion-joint-bar-fill.warning { background: var(--warning); }
+    .motion-joint-bar-fill.danger { background: var(--danger); }
+    .motion-joint-deviation { font-size: 11px; font-weight: 600; width: 40px; text-align: right; }
+    .motion-joint-deviation.good { color: var(--success); }
+    .motion-joint-deviation.warning { color: var(--warning); }
+    .motion-joint-deviation.danger { color: var(--danger); }
+
+    .motion-advice-item {
+      padding: 14px; margin-bottom: 10px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px;
+      border-left: 3px solid var(--primary);
+    }
+    .motion-advice-item.shoulder { border-left-color: #007AFF; }
+    .motion-advice-item.elbow { border-left-color: #5856D6; }
+    .motion-advice-item.wrist { border-left-color: #FF9F0A; }
+    .motion-advice-item.hip { border-left-color: #30D158; }
+    .motion-advice-item.knee { border-left-color: #FF453A; }
+    .advice-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .advice-title { font-size: 13px; font-weight: 700; }
+    .advice-level { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+    .advice-level.good { background: rgba(48,209,88,0.15); color: var(--success); }
+    .advice-level.warning { background: rgba(255,159,10,0.15); color: var(--warning); }
+    .advice-level.danger { background: rgba(255,69,58,0.15); color: var(--danger); }
+    .advice-desc { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; line-height: 1.5; }
+    .advice-exercise { font-size: 12px; color: var(--accent-light); }
+
+    .motion-history-item {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px; margin-bottom: 8px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 10px; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .motion-history-item:hover { background: rgba(255,255,255,0.06); }
+    .motion-history-score {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 900; color: white;
+    }
+    .motion-history-info { flex: 1; }
+    .history-name { font-size: 13px; font-weight: 600; }
+    .history-date { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .history-dims { display: flex; gap: 4px; margin-top: 4px; }
+    .history-dim { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+    .motion-history-delete {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 14px; padding: 6px;
+      transition: color 0.2s;
+    }
+    .motion-history-delete:hover { color: var(--danger); }
+
+    .motion-plan-week { margin-bottom: 16px; }
+    .week-title { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+    .week-goal { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+    .motion-plan-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .motion-plan-day {
+      padding: 10px 6px; border-radius: 8px;
+      text-align: center; font-size: 11px;
+    }
+    .motion-plan-day.train { background: rgba(0,122,255,0.1); border: 1px solid rgba(0,122,255,0.2); }
+    .motion-plan-day.rest { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+    .day-label { font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
+    .day-exercise { color: var(--text-secondary); font-size: 10px; }
+
+    .motion-split-view { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .motion-split-half { position: relative; }
+    .split-label {
+      position: absolute; top: 8px; left: 8px;
+      font-size: 11px; font-weight: 600;
+      background: rgba(0,0,0,0.6); color: white;
+      padding: 3px 10px; border-radius: 6px; z-index: 5;
+    }
+    .motion-skeleton-canvas {
+      width: 100%; border-radius: 8px;
+      background: #000;
+    }
+
+    /* EMPTY STATE */
+    .empty-state { text-align: center; padding: 40px 20px; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.3; }
+    .empty-state h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; color: var(--text-muted); }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .motion-compare-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main { margin-left: 0; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .grid-4 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon"><i class="fa-solid fa-table-tennis-paddle-ball"></i></div>
+      <h1>乒乓球 AI 教学系统</h1>
+      <p>AI-Powered Training</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">训练中心</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigateTo('dashboard')">
+        <i class="fa-solid fa-chart-line"></i><span>仪表盘</span>
+      </div>
+      <div class="nav-item" data-page="training" onclick="navigateTo('training')">
+        <i class="fa-solid fa-clipboard-list"></i><span>训练记录</span>
+      </div>
+      <div class="nav-item" data-page="analysis" onclick="navigateTo('analysis')">
+        <i class="fa-solid fa-brain"></i><span>动作分析</span>
+      </div>
+      <div class="nav-section-title">智能辅助</div>
+      <div class="nav-item" data-page="progress" onclick="navigateTo('progress')">
+        <i class="fa-solid fa-chart-pie"></i><span>成长复盘</span>
+      </div>
+      <div class="nav-item" data-page="course" onclick="navigateTo('course')">
+        <i class="fa-solid fa-graduation-cap"></i><span>课程计划</span>
+      </div>
+      <div class="nav-item" data-page="compare" onclick="navigateTo('compare')">
+        <i class="fa-solid fa-arrows-left-right"></i><span>动作对比</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-card">
+        <div class="user-avatar">学</div>
+        <div class="user-info">
+          <p>学员</p>
+          <span>在线训练中</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title" id="topbar-title">仪表盘</div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary" onclick="showAddTrainingModal()">
+          <i class="fa-solid fa-plus"></i> 新增训练
+        </button>
+      </div>
+    </header>
+    <div class="content">
+
+      <!-- PAGE: Dashboard -->
+      <div class="page active" id="page-dashboard">
+        <div class="welcome-banner">
+          <h2>🏓 欢迎回来，学员！</h2>
+          <p>AI 辅助训练，让每一次挥拍都更精准</p>
+          <div class="welcome-stats">
+            <div class="welcome-stat"><strong id="welcome-count">12</strong><span>总训练次数</span></div>
+            <div class="welcome-stat"><strong id="welcome-score">78</strong><span>平均评分</span></div>
+            <div class="welcome-stat"><strong id="welcome-streak">5</strong><span>连续训练(天)</span></div>
+          </div>
+        </div>
+        <div class="grid-4" id="stat-cards">
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fa-solid fa-table-tennis-paddle-ball"></i></div>
+            <div class="stat-value" id="stat-total">12</div>
+            <div class="stat-label">总训练次数</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> +3 本周</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange"><i class="fa-solid fa-fire"></i></div>
+            <div class="stat-value" id="stat-score">78</div>
+            <div class="stat-label">平均评分</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> +5.2</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fa-solid fa-bullseye"></i></div>
+            <div class="stat-value" id="stat-best">92</div>
+            <div class="stat-label">最高评分</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> 新高</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple"><i class="fa-solid fa-clock"></i></div>
+            <div class="stat-value" id="stat-hours">18.5h</div>
+            <div class="stat-label">训练时长</div>
+            <div class="stat-change up"><i class="fa-solid fa-arrow-up"></i> +2.3h</div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:20px">
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-chart-area" style="color:var(--primary)"></i> 评分趋势</div>
+            <div class="chart-container" style="height:260px"><canvas id="chart-score-trend"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--accent)"></i> 技术分布</div>
+            <div class="chart-container" style="height:260px"><canvas id="chart-skill-dist"></canvas></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-title"><i class="fa-solid fa-bolt" style="color:var(--warning)"></i> 最近活动</div>
+          <div id="activity-list"></div>
+        </div>
+      </div>
+
+      <!-- PAGE: Training -->
+      <div class="page" id="page-training">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 style="font-size:20px;font-weight:900">训练记录</h2>
+            <p style="font-size:13px;color:var(--text-muted);margin-top:4px">记录每一次挥拍的进步</p>
+          </div>
+          <button class="btn btn-primary" onclick="showAddTrainingModal()"><i class="fa-solid fa-plus"></i> 新增训练</button>
+        </div>
+        <div id="training-list"></div>
+      </div>
+
+      <!-- PAGE: Analysis -->
+      <div class="page" id="page-analysis">
+        <div style="margin-bottom:20px">
+          <h2 style="font-size:20px;font-weight:900">动作分析</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px">AI 深度分析你的技术细节</p>
+        </div>
+        <div class="grid-3" id="analysis-cards">
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-hand-fist" style="color:var(--primary)"></i> 正手攻球</div>
+            <div class="progress-ring">
+              <svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--success)" stroke-width="8" stroke-dasharray="226.2" stroke-dashoffset="33.9" stroke-linecap="round"/></svg>
+              <span class="ring-value score-excellent">85</span>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:8px">挥拍幅度优良，击球点稳定</p>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-hand" style="color:var(--accent)"></i> 反手拨球</div>
+            <div class="progress-ring">
+              <svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--primary)" stroke-width="8" stroke-dasharray="226.2" stroke-dashoffset="56.6" stroke-linecap="round"/></svg>
+              <span class="ring-value score-good">75</span>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:8px">手腕发力需加强</p>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-rotate" style="color:var(--warning)"></i> 发球技术</div>
+            <div class="progress-ring">
+              <svg width="100" height="100"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="8"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--warning)" stroke-width="8" stroke-dasharray="226.2" stroke-dashoffset="79.2" stroke-linecap="round"/></svg>
+              <span class="ring-value score-average">65</span>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:8px">抛球高度不一致</p>
+          </div>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-title"><i class="fa-solid fa-chart-radar" style="color:var(--accent)"></i> 综合技术雷达</div>
+          <div class="chart-container" style="height:320px"><canvas id="chart-radar"></canvas></div>
+        </div>
+      </div>
+
+      <!-- PAGE: Progress -->
+      <div class="page" id="page-progress">
+        <div style="margin-bottom:20px">
+          <h2 style="font-size:20px;font-weight:900">成长复盘</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px">量化成长，看见进步</p>
+        </div>
+        <div class="grid-4">
+          <div class="stat-card">
+            <div class="stat-icon green"><i class="fa-solid fa-arrow-trend-up"></i></div>
+            <div class="stat-value" style="color:var(--success)">+12%</div>
+            <div class="stat-label">月度提升率</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon blue"><i class="fa-solid fa-trophy"></i></div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">已掌握技术</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon orange"><i class="fa-solid fa-star-half-stroke"></i></div>
+            <div class="stat-value">2</div>
+            <div class="stat-label">待提升技术</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon purple"><i class="fa-solid fa-calendar-check"></i></div>
+            <div class="stat-value">85%</div>
+            <div class="stat-label">训练完成率</div>
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:20px">
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--success)"></i> 成长曲线</div>
+            <div class="chart-container" style="height:280px"><canvas id="chart-growth"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--primary)"></i> 各项技术进度</div>
+            <div class="chart-container" style="height:280px"><canvas id="chart-progress"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: Course -->
+      <div class="page" id="page-course">
+        <div style="margin-bottom:20px">
+          <h2 style="font-size:20px;font-weight:900">课程计划</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px">AI 个性化推荐训练方案</p>
+        </div>
+        <div class="grid-2" id="course-list">
+          <div class="course-card">
+            <div class="course-header">
+              <div class="course-icon" style="background:rgba(0,122,255,0.15);color:var(--primary)"><i class="fa-solid fa-hand-fist"></i></div>
+              <div><div class="course-title">正手攻球强化</div><div class="course-duration">4 周 · 12 课时</div></div>
+            </div>
+            <div class="course-desc">针对正手攻球动作进行系统强化训练，重点改善击球点和挥拍轨迹。</div>
+            <div class="course-meta"><span><i class="fa-solid fa-signal"></i> 中级</span><span><i class="fa-solid fa-user"></i> 已有 128 人参加</span></div>
+          </div>
+          <div class="course-card">
+            <div class="course-header">
+              <div class="course-icon" style="background:rgba(88,86,214,0.15);color:var(--accent)"><i class="fa-solid fa-hand"></i></div>
+              <div><div class="course-title">反手拨球入门</div><div class="course-duration">3 周 · 9 课时</div></div>
+            </div>
+            <div class="course-desc">从零开始掌握反手拨球技术，建立稳定的反手进攻体系。</div>
+            <div class="course-meta"><span><i class="fa-solid fa-signal"></i> 初级</span><span><i class="fa-solid fa-user"></i> 已有 256 人参加</span></div>
+          </div>
+          <div class="course-card">
+            <div class="course-header">
+              <div class="course-icon" style="background:rgba(255,159,10,0.15);color:var(--warning)"><i class="fa-solid fa-rotate"></i></div>
+              <div><div class="course-title">发球变化训练</div><div class="course-duration">2 周 · 6 课时</div></div>
+            </div>
+            <div class="course-desc">学习下旋、侧旋、不转发球的变化组合，提升发球威胁性。</div>
+            <div class="course-meta"><span><i class="fa-solid fa-signal"></i> 中级</span><span><i class="fa-solid fa-user"></i> 已有 89 人参加</span></div>
+          </div>
+          <div class="course-card">
+            <div class="course-header">
+              <div class="course-icon" style="background:rgba(48,209,88,0.15);color:var(--success)"><i class="fa-solid fa-shoe-prints"></i></div>
+              <div><div class="course-title">步法移动特训</div><div class="course-duration">3 周 · 9 课时</div></div>
+            </div>
+            <div class="course-desc">系统训练左右滑步、前后交叉步，提升移动中击球稳定性。</div>
+            <div class="course-meta"><span><i class="fa-solid fa-signal"></i> 初级</span><span><i class="fa-solid fa-user"></i> 已有 175 人参加</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAGE: Motion Compare -->
+      <div class="page" id="page-compare">
+        <div style="margin-bottom:20px">
+          <h2 style="font-size:20px;font-weight:900">动作对比</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px">与马龙标准动作实时对比分析</p>
+        </div>
+
+        <!-- 动作选择器 -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title"><i class="fa-solid fa-list" style="color:var(--accent)"></i> 选择对比动作</div>
+          <div class="motion-selector-grid" id="motion-selector"></div>
+        </div>
+
+        <!-- 视频/摄像头区域 -->
+        <div class="motion-compare-layout">
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-video" style="color:var(--primary)"></i> 你的动作</div>
+            <div class="motion-video-container" id="video-container">
+              <video id="camera-video" autoplay playsinline muted style="display:none"></video>
+              <canvas id="pose-canvas"></canvas>
+              <div class="motion-video-placeholder" id="video-placeholder">
+                <i class="fa-solid fa-video-slash"></i>
+                <span>点击下方按钮开启摄像头</span>
+              </div>
+            </div>
+            <div class="motion-controls">
+              <button class="btn btn-primary" id="btn-camera" onclick="motionCompareUI.toggleCamera()">
+                <i class="fa-solid fa-camera"></i> 开启摄像头
+              </button>
+              <button class="btn btn-accent" id="btn-record" onclick="motionCompareUI.startRecording()" disabled>
+                <i class="fa-solid fa-circle"></i> 开始录制
+              </button>
+              <button class="btn btn-danger" id="btn-stop" onclick="motionCompareUI.stopRecording()" style="display:none">
+                <i class="fa-solid fa-stop"></i> 停止录制
+              </button>
+              <button class="btn btn-outline" id="btn-realtime-compare" onclick="motionCompareUI.toggleRealtimeCompare()">
+                <i class="fa-solid fa-arrows-left-right"></i> 实时对比
+              </button>
+              <button class="btn btn-outline" id="btn-split-view" onclick="motionCompareUI.showSplitView()">
+                <i class="fa-solid fa-columns"></i> 分屏对比
+              </button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title"><i class="fa-solid fa-user-tie" style="color:var(--accent)"></i> 马龙标准动作</div>
+            <div class="motion-video-container">
+              <canvas id="standard-canvas"></canvas>
+              <div class="motion-video-placeholder" id="standard-placeholder">
+                <i class="fa-solid fa-user"></i>
+                <span>选择动作后显示标准骨骼</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;font-size:13px;color:var(--text-secondary);line-height:1.6" id="standard-desc">
+              选择一项技术动作，查看马龙标准动作示范
+            </div>
+          </div>
+        </div>
+
+        <!-- 分析结果区域 -->
+        <div class="motion-result-panel" id="motion-result-panel" style="display:none">
+          <div class="grid-2" style="margin-top:20px">
+            <div class="card">
+              <div class="card-title"><i class="fa-solid fa-star" style="color:var(--warning)"></i> 综合评分</div>
+              <div class="motion-score-ring" id="motion-score-ring">
+                <div class="score-number" id="motion-score-number">0</div>
+                <div class="score-label">综合评分</div>
+              </div>
+              <div id="motion-dimension-scores"></div>
+            </div>
+            <div class="card">
+              <div class="card-title"><i class="fa-solid fa-list-check" style="color:var(--primary)"></i> 关节差异</div>
+              <div id="motion-joint-list"></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div class="card-title"><i class="fa-solid fa-lightbulb" style="color:var(--warning)"></i> AI 调整建议</div>
+            <div id="motion-advice-panel"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:16px">
+            <button class="btn btn-primary" onclick="motionCompareUI.generateTrainingPlan()"><i class="fa-solid fa-dumbbell"></i> 生成训练计划</button>
+            <button class="btn btn-outline" onclick="motionCompareUI.exportReport()"><i class="fa-solid fa-file-export"></i> 导出报告</button>
+          </div>
+          <div id="motion-training-plan" style="margin-top:16px"></div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div class="card" style="margin-top:20px">
+          <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent)"></i> 对比历史</div>
+          <div id="motion-history-list"></div>
+        </div>
+
+        <!-- 趋势图 -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-title"><i class="fa-solid fa-chart-line" style="color:var(--success)"></i> 评分趋势</div>
+          <div class="chart-container" style="height:220px"><canvas id="motionTrendChart"></canvas></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ADD TRAINING MODAL -->
+  <div class="modal-overlay" id="modal-add-training">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>新增训练记录</h3>
+        <button class="modal-close" onclick="closeModal('modal-add-training')"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">训练日期</label>
+          <input type="date" class="form-input" id="form-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">训练内容</label>
+          <input type="text" class="form-input" id="form-content" placeholder="例：正手攻球练习" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">训练时长（分钟）</label>
+          <input type="number" class="form-input" id="form-duration" placeholder="60" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">AI 评分</label>
+          <input type="number" class="form-input" id="form-score" placeholder="0-100" min="0" max="100" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">备注</label>
+          <textarea class="form-textarea" id="form-note" placeholder="训练心得..."></textarea>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="saveTraining()"><i class="fa-solid fa-check"></i> 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast-container" id="toast-container"></div>
+
+<script>
+// ========== GLOBAL CONFIG ==========
+Chart.defaults.color = 'rgba(255,255,255,0.6)';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'Noto Sans SC', sans-serif";
+
+// ========== DATA ==========
+const defaultRecords = [
+  { id: 'r1', date: '2026-05-20', content: '正手攻球练习', duration: 60, score: 82, note: '击球点稳定，挥拍有力', tags: ['正手', '攻球'] },
+  { id: 'r2', date: '2026-05-19', content: '反手拨球训练', duration: 45, score: 75, note: '手腕发力需要加强', tags: ['反手', '拨球'] },
+  { id: 'r3', date: '2026-05-18', content: '发球变化训练', duration: 30, score: 68, note: '下旋球旋转不够', tags: ['发球', '下旋'] },
+  { id: 'r4', date: '2026-05-17', content: '步法移动训练', duration: 50, score: 85, note: '滑步流畅性提升', tags: ['步法'] },
+  { id: 'r5', date: '2026-05-16', content: '正手拉弧圈', duration: 55, score: 78, note: '拉球弧线较好', tags: ['正手', '弧圈'] },
+  { id: 'r6', date: '2026-05-15', content: '搓球控制训练', duration: 40, score: 72, note: '搓球稳定性需改善', tags: ['搓球'] },
+];
+
+const AI_ADVICES = {
+  '正手攻球': { score: 82, advices: ['挥拍幅度良好，击球点较高', '注意腰胯转动配合', '建议增加多球训练强化肌肉记忆'] },
+  '反手拨球': { score: 75, advices: ['手腕发力时机偏晚', '击球后随挥不够充分', '建议反手拨球多球练习'] },
+  '发球技术': { score: 68, advices: ['抛球高度不够稳定', '触球瞬间手腕爆发力不足', '建议固定抛球高度练习'] },
+};
+
+// ========== DIMENSION NAMES & COLORS ==========
+const DIMENSION_NAMES = { shoulder: '肩部', elbow: '肘部', wrist: '腕部', hip: '髋部', knee: '膝部' };
+const DIMENSION_COLORS = { shoulder: '#007AFF', elbow: '#5856D6', wrist: '#FF9F0A', hip: '#30D158', knee: '#FF453A' };
+
+// ========== MALONG STANDARD DATA ==========
+const MALONG_STANDARD_DATA = {
+  forehand_attack: {
+    name: '正手攻球',
+    desc: '马龙标志性正手攻球动作：蹬地转腰、前臂快收、击球点高而前',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 30, left_shoulder: 15, right_elbow: 100, left_elbow: 85, right_wrist: 10, left_wrist: 5, right_hip: 170, left_hip: 175, right_knee: 170, left_knee: 175 } },
+      { phase: 'backswing', joints: { right_shoulder: 75, left_shoulder: 10, right_elbow: 130, left_elbow: 80, right_wrist: 25, left_wrist: 0, right_hip: 165, left_hip: 175, right_knee: 155, left_knee: 175 } },
+      { phase: 'hit', joints: { right_shoulder: 45, left_shoulder: 25, right_elbow: 95, left_elbow: 75, right_wrist: -10, left_wrist: 5, right_hip: 155, left_hip: 170, right_knee: 150, left_knee: 175 } },
+      { phase: 'follow_through', joints: { right_shoulder: 20, left_shoulder: 35, right_elbow: 70, left_elbow: 70, right_wrist: -30, left_wrist: 10, right_hip: 160, left_hip: 165, right_knee: 160, left_knee: 175 } },
+      { phase: 'recovery', joints: { right_shoulder: 30, left_shoulder: 15, right_elbow: 100, left_elbow: 85, right_wrist: 10, left_wrist: 5, right_hip: 170, left_hip: 175, right_knee: 170, left_knee: 175 } },
+    ]
+  },
+  backhand_attack: {
+    name: '反手攻球',
+    desc: '马龙反手攻球：身体正对球台、前臂外旋发力、击球点靠前',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 100, right_wrist: 5, left_wrist: 10, right_hip: 175, left_hip: 170, right_knee: 175, left_knee: 170 } },
+      { phase: 'backswing', joints: { right_shoulder: 10, left_shoulder: 55, right_elbow: 80, left_elbow: 130, right_wrist: 0, left_wrist: 25, right_hip: 175, left_hip: 165, right_knee: 175, left_knee: 155 } },
+      { phase: 'hit', joints: { right_shoulder: 20, left_shoulder: 30, right_elbow: 75, left_elbow: 95, right_wrist: 5, left_wrist: -10, right_hip: 170, left_hip: 155, right_knee: 175, left_knee: 150 } },
+      { phase: 'follow_through', joints: { right_shoulder: 30, left_shoulder: 15, right_elbow: 70, left_elbow: 70, right_wrist: 10, left_wrist: -30, right_hip: 165, left_hip: 160, right_knee: 175, left_knee: 160 } },
+      { phase: 'recovery', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 100, right_wrist: 5, left_wrist: 10, right_hip: 175, left_hip: 170, right_knee: 175, left_knee: 170 } },
+    ]
+  },
+  forehand_loop_topspin: {
+    name: '正手下旋拉球',
+    desc: '马龙正手拉下旋：降低重心、向上发力摩擦、制造强上旋',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 110, left_elbow: 85, right_wrist: 15, left_wrist: 5, right_hip: 160, left_hip: 165, right_knee: 145, left_knee: 155 } },
+      { phase: 'backswing', joints: { right_shoulder: 80, left_shoulder: 10, right_elbow: 140, left_elbow: 80, right_wrist: 35, left_wrist: 0, right_hip: 150, left_hip: 165, right_knee: 125, left_knee: 155 } },
+      { phase: 'hit', joints: { right_shoulder: 50, left_shoulder: 30, right_elbow: 90, left_elbow: 70, right_wrist: -15, left_wrist: 5, right_hip: 140, left_hip: 160, right_knee: 130, left_knee: 160 } },
+      { phase: 'follow_through', joints: { right_shoulder: 25, left_shoulder: 40, right_elbow: 65, left_elbow: 65, right_wrist: -35, left_wrist: 10, right_hip: 155, left_hip: 155, right_knee: 145, left_knee: 165 } },
+      { phase: 'recovery', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 110, left_elbow: 85, right_wrist: 15, left_wrist: 5, right_hip: 160, left_hip: 165, right_knee: 145, left_knee: 155 } },
+    ]
+  },
+  backhand_loop_topspin: {
+    name: '反手下旋拉球',
+    desc: '马龙反手拉下旋：前臂外旋、手腕弹击摩擦、制造上旋弧线',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 110, right_wrist: 5, left_wrist: 15, right_hip: 165, left_hip: 160, right_knee: 155, left_knee: 145 } },
+      { phase: 'backswing', joints: { right_shoulder: 10, left_shoulder: 65, right_elbow: 80, left_elbow: 140, right_wrist: 0, left_wrist: 35, right_hip: 165, left_hip: 150, right_knee: 155, left_knee: 125 } },
+      { phase: 'hit', joints: { right_shoulder: 25, left_shoulder: 40, right_elbow: 75, left_elbow: 90, right_wrist: 5, left_wrist: -15, right_hip: 160, left_hip: 140, right_knee: 160, left_knee: 130 } },
+      { phase: 'follow_through', joints: { right_shoulder: 35, left_shoulder: 20, right_elbow: 70, left_elbow: 65, right_wrist: 10, left_wrist: -35, right_hip: 155, left_hip: 155, right_knee: 165, left_knee: 145 } },
+      { phase: 'recovery', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 110, right_wrist: 5, left_wrist: 15, right_hip: 165, left_hip: 160, right_knee: 155, left_knee: 145 } },
+    ]
+  },
+  forehand_push: {
+    name: '正手搓球',
+    desc: '马龙正手搓球：板面后仰、切球底部、控制弧线低平',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 95, left_elbow: 85, right_wrist: 10, left_wrist: 5, right_hip: 170, left_hip: 175, right_knee: 165, left_knee: 170 } },
+      { phase: 'backswing', joints: { right_shoulder: 45, left_shoulder: 10, right_elbow: 115, left_elbow: 80, right_wrist: 20, left_wrist: 0, right_hip: 168, left_hip: 175, right_knee: 160, left_knee: 170 } },
+      { phase: 'hit', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 85, left_elbow: 80, right_wrist: -5, left_wrist: 5, right_hip: 170, left_hip: 173, right_knee: 165, left_knee: 170 } },
+      { phase: 'follow_through', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 80, left_elbow: 85, right_wrist: -15, left_wrist: 10, right_hip: 170, left_hip: 172, right_knee: 168, left_knee: 170 } },
+      { phase: 'recovery', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 95, left_elbow: 85, right_wrist: 10, left_wrist: 5, right_hip: 170, left_hip: 175, right_knee: 165, left_knee: 170 } },
+    ]
+  },
+  backhand_push: {
+    name: '反手搓球',
+    desc: '马龙反手搓球：肘部前顶、手腕切球、控制落点精准',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 95, right_wrist: 5, left_wrist: 10, right_hip: 175, left_hip: 170, right_knee: 170, left_knee: 165 } },
+      { phase: 'backswing', joints: { right_shoulder: 10, left_shoulder: 45, right_elbow: 80, left_elbow: 115, right_wrist: 0, left_wrist: 20, right_hip: 175, left_hip: 168, right_knee: 170, left_knee: 160 } },
+      { phase: 'hit', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 80, left_elbow: 85, right_wrist: 5, left_wrist: -5, right_hip: 173, left_hip: 170, right_knee: 170, left_knee: 165 } },
+      { phase: 'follow_through', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 85, left_elbow: 80, right_wrist: 10, left_wrist: -15, right_hip: 172, left_hip: 170, right_knee: 170, left_knee: 168 } },
+      { phase: 'recovery', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 95, right_wrist: 5, left_wrist: 10, right_hip: 175, left_hip: 170, right_knee: 170, left_knee: 165 } },
+    ]
+  },
+  forehand_flick: {
+    name: '正手挑球',
+    desc: '马龙正手挑球：上步到位、手腕弹击、快速收前臂',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 100, left_elbow: 85, right_wrist: 10, left_wrist: 5, right_hip: 165, left_hip: 170, right_knee: 155, left_knee: 165 } },
+      { phase: 'backswing', joints: { right_shoulder: 35, left_shoulder: 10, right_elbow: 120, left_elbow: 80, right_wrist: 20, left_wrist: 0, right_hip: 155, left_hip: 170, right_knee: 140, left_knee: 165 } },
+      { phase: 'hit', joints: { right_shoulder: 20, left_shoulder: 25, right_elbow: 80, left_elbow: 75, right_wrist: -15, left_wrist: 5, right_hip: 150, left_hip: 168, right_knee: 135, left_knee: 165 } },
+      { phase: 'follow_through', joints: { right_shoulder: 15, left_shoulder: 30, right_elbow: 70, left_elbow: 70, right_wrist: -25, left_wrist: 10, right_hip: 155, left_hip: 165, right_knee: 145, left_knee: 168 } },
+      { phase: 'recovery', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 100, left_elbow: 85, right_wrist: 10, left_wrist: 5, right_hip: 165, left_hip: 170, right_knee: 155, left_knee: 165 } },
+    ]
+  },
+  backhand_flick_advanced: {
+    name: '反手挑球',
+    desc: '马龙反手挑球：反手位上步、手腕快速翻转弹击',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 100, right_wrist: 5, left_wrist: 10, right_hip: 170, left_hip: 165, right_knee: 165, left_knee: 155 } },
+      { phase: 'backswing', joints: { right_shoulder: 10, left_shoulder: 35, right_elbow: 80, left_elbow: 120, right_wrist: 0, left_wrist: 20, right_hip: 170, left_hip: 155, right_knee: 165, left_knee: 140 } },
+      { phase: 'hit', joints: { right_shoulder: 25, left_shoulder: 20, right_elbow: 75, left_elbow: 80, right_wrist: 5, left_wrist: -15, right_hip: 168, left_hip: 150, right_knee: 165, left_knee: 135 } },
+      { phase: 'follow_through', joints: { right_shoulder: 30, left_shoulder: 15, right_elbow: 70, left_elbow: 70, right_wrist: 10, left_wrist: -25, right_hip: 165, left_hip: 155, right_knee: 168, left_knee: 145 } },
+      { phase: 'recovery', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 100, right_wrist: 5, left_wrist: 10, right_hip: 170, left_hip: 165, right_knee: 165, left_knee: 155 } },
+    ]
+  },
+  footwork_forward_back: {
+    name: '前后移动步伐',
+    desc: '马龙前后步伐：上步迎前到位快、退步还原重心稳',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 170, right_knee: 165, left_knee: 165 } },
+      { phase: 'backswing', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 160, left_hip: 165, right_knee: 135, left_knee: 165 } },
+      { phase: 'hit', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 155, left_hip: 160, right_knee: 130, left_knee: 160 } },
+      { phase: 'follow_through', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 165, left_hip: 160, right_knee: 155, left_knee: 160 } },
+      { phase: 'recovery', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 170, right_knee: 165, left_knee: 165 } },
+    ]
+  },
+  footwork_side_to_side: {
+    name: '左右移动步伐',
+    desc: '马龙左右步伐：滑步衔接流畅、重心转换迅速',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 170, right_knee: 165, left_knee: 165 } },
+      { phase: 'backswing', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 95, left_elbow: 85, right_wrist: 5, left_wrist: 5, right_hip: 165, left_hip: 170, right_knee: 150, left_knee: 170 } },
+      { phase: 'hit', joints: { right_shoulder: 30, left_shoulder: 10, right_elbow: 95, left_elbow: 80, right_wrist: 5, left_wrist: 5, right_hip: 160, left_hip: 170, right_knee: 145, left_knee: 170 } },
+      { phase: 'follow_through', joints: { right_shoulder: 15, left_shoulder: 25, right_elbow: 85, left_elbow: 95, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 165, right_knee: 170, left_knee: 150 } },
+      { phase: 'recovery', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 170, right_knee: 165, left_knee: 165 } },
+    ]
+  },
+  serve: {
+    name: '发球+前后步伐',
+    desc: '马龙发球与前后步伐衔接：发球后迅速还原、准备迎前或后退',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 170, right_knee: 160, left_knee: 165 } },
+      { phase: 'backswing', joints: { right_shoulder: 15, left_shoulder: 40, right_elbow: 85, left_elbow: 120, right_wrist: 0, left_wrist: 30, right_hip: 170, left_hip: 165, right_knee: 155, left_knee: 160 } },
+      { phase: 'hit', joints: { right_shoulder: 25, left_shoulder: 20, right_elbow: 85, left_elbow: 80, right_wrist: 10, left_wrist: -20, right_hip: 168, left_hip: 162, right_knee: 150, left_knee: 158 } },
+      { phase: 'follow_through', joints: { right_shoulder: 20, left_shoulder: 15, right_elbow: 90, left_elbow: 85, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 168, right_knee: 158, left_knee: 162 } },
+      { phase: 'recovery', joints: { right_shoulder: 20, left_shoulder: 20, right_elbow: 90, left_elbow: 90, right_wrist: 5, left_wrist: 5, right_hip: 170, left_hip: 170, right_knee: 165, left_knee: 165 } },
+    ]
+  },
+  backhand_flick: {
+    name: '反手拨球',
+    desc: '马龙反手拨球技术：站位近台、前臂外旋、借力发力',
+    keyFrames: [
+      { phase: 'ready', joints: { right_shoulder: 15, left_shoulder: 20, right_elbow: 85, left_elbow: 95, right_wrist: 5, left_wrist: 10, right_hip: 175, left_hip: 172, right_knee: 172, left_knee: 170 } },
+      { phase: 'backswing', joints: { right_shoulder: 10, left_shoulder: 35, right_elbow: 80, left_elbow: 110, right_wrist: 0, left_wrist: 15, right_hip: 175, left_hip: 170, right_knee: 172, left_knee: 168 } },
+      { phase: 'hit', joints: { right_shoulder: 20, left_shoulder: 25, right_elbow: 78, left_elbow: 85, right_wrist: 5, left_wrist: -5, right_hip: 172, left_hip: 168, right_knee: 170, left_knee: 165 } },
+      { phase: 'follow_through', joints: { right_shoulder: 25, left_shoulder: 15, right_elbow: 75, left_elbow: 75, right_wrist: 8, left_wrist: -10, right_hip: 170, left_hip: 168, right_knee: 172, left_knee: 168 } },
+      { phase: 'recovery', joints: { right_shoulder: 15, left_shoulder: 20, right_elbow: 85, left_elbow: 95, right_wrist: 5, left_wrist: 10, right_hip: 175, left_hip: 172, right_knee: 172, left_knee: 170 } },
+    ]
+  }
+};
+
+const MOTION_CATEGORIES = [
+  { title: '进攻技术', items: ['forehand_attack', 'backhand_attack', 'forehand_loop_topspin', 'backhand_loop_topspin'] },
+  { title: '控制技术', items: ['forehand_push', 'backhand_push', 'forehand_flick', 'backhand_flick_advanced', 'backhand_flick', 'serve'] },
+  { title: '步法训练', items: ['footwork_forward_back', 'footwork_side_to_side'] },
+];
+
+const ADVICE_RULES = [
+  { dimension: 'shoulder', good: { min: 80, msg: '肩部动作规范，转肩幅度合理' }, warning: { min: 50, msg: '转肩幅度偏大/偏小，需注意肩部旋转角度' }, danger: { min: 0, msg: '肩部动作偏差较大，严重影响击球质量' }, exercise: '肩部旋转拉伸 + 转肩挥拍空击练习' },
+  { dimension: 'elbow', good: { min: 80, msg: '肘部弯曲角度合适，发力流畅' }, warning: { min: 50, msg: '肘部角度有偏差，影响发力效率' }, danger: { min: 0, msg: '肘部动作偏差明显，需重点纠正' }, exercise: '肘部角度定型训练 + 前臂屈伸力量练习' },
+  { dimension: 'wrist', good: { min: 80, msg: '手腕动作灵活，击球瞬间发力合理' }, warning: { min: 50, msg: '手腕动作需改善，注意击球瞬间的手腕爆发' }, danger: { min: 0, msg: '手腕动作偏差大，影响球的旋转和控制' }, exercise: '手腕灵活性训练 + 甩腕弹击练习' },
+  { dimension: 'hip', good: { min: 80, msg: '髋部转动配合良好，重心转换流畅' }, warning: { min: 50, msg: '髋部转动不够充分，重心转换有延迟' }, danger: { min: 0, msg: '髋部动作偏差明显，影响整体发力链' }, exercise: '转胯练习 + 重心转换滑步训练' },
+  { dimension: 'knee', good: { min: 80, msg: '膝部弯曲角度合理，蹬地发力充分' }, warning: { min: 50, msg: '膝部角度有偏差，蹬地发力不够充分' }, danger: { min: 0, msg: '膝部动作偏差较大，影响下肢发力稳定性' }, exercise: '蹲起练习 + 侧向滑步腿部力量训练' },
+];
+
+const SKELETON_CONNECTIONS = [
+  [11,12],[11,13],[13,15],[12,14],[14,16],
+  [11,23],[12,24],[23,24],
+  [23,25],[25,27],[24,26],[26,28],
+  [0,1],[1,2],[2,3],[3,7],[0,4],[4,5],[5,6],[6,8],
+  [15,17],[15,19],[15,21],[16,18],[16,20],[16,22],
+  [27,29],[27,31],[28,30],[28,32]
+];
+
+const JOINT_ANGLE_MAP = [
+  { jointId: 'right_shoulder', jointName: '右肩', a: 12, b: 14, c: 24, weight: 0.25, dimension: 'shoulder' },
+  { jointId: 'left_shoulder', jointName: '左肩', a: 11, b: 13, c: 23, weight: 0.25, dimension: 'shoulder' },
+  { jointId: 'right_elbow', jointName: '右肘', a: 12, b: 14, c: 16, weight: 0.20, dimension: 'elbow' },
+  { jointId: 'left_elbow', jointName: '左肘', a: 11, b: 13, c: 15, weight: 0.20, dimension: 'elbow' },
+  { jointId: 'right_wrist', jointName: '右腕', a: 14, b: 16, c: 20, weight: 0.15, dimension: 'wrist' },
+  { jointId: 'left_wrist', jointName: '左腕', a: 13, b: 15, c: 19, weight: 0.15, dimension: 'wrist' },
+  { jointId: 'right_hip', jointName: '右髋', a: 24, b: 26, c: 12, weight: 0.20, dimension: 'hip' },
+  { jointId: 'left_hip', jointName: '左髋', a: 23, b: 25, c: 11, weight: 0.20, dimension: 'hip' },
+  { jointId: 'right_knee', jointName: '右膝', a: 26, b: 28, c: 24, weight: 0.20, dimension: 'knee' },
+  { jointId: 'left_knee', jointName: '左膝', a: 25, b: 27, c: 23, weight: 0.20, dimension: 'knee' },
+];
+
+// ========== LOCAL STORAGE ==========
+function getRecords() { try { return JSON.parse(localStorage.getItem('pp_records')) || defaultRecords; } catch(e) { return defaultRecords; } }
+function saveRecords(records) { localStorage.setItem('pp_records', JSON.stringify(records)); }
+function getMotionHistory() { try { return JSON.parse(localStorage.getItem('pp_motion_history')) || []; } catch(e) { return []; } }
+function saveMotionHistory(history) { localStorage.setItem('pp_motion_history', JSON.stringify(history)); }
+function deleteMotionHistory(id) { const h = getMotionHistory().filter(r => r.id !== id); saveMotionHistory(h); }
+
+// ========== TOAST ==========
+function showToast(msg, type) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle';
+  const color = type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--primary)';
+  toast.innerHTML = '<i class="fa-solid ' + icon + '" style="color:' + color + '"></i> ' + msg;
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
+}
+
+// ========== NAVIGATION ==========
+const pageTitles = { dashboard: '仪表盘', training: '训练记录', analysis: '动作分析', progress: '成长复盘', course: '课程计划', compare: '动作对比' };
+function navigateTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  const nav = document.querySelector('.nav-item[data-page="' + page + '"]');
+  if (nav) nav.classList.add('active');
+  document.getElementById('topbar-title').textContent = pageTitles[page] || '';
+  if (page === 'compare' && motionCompareUI) motionCompareUI.onPageEnter();
+  if (page === 'dashboard') initDashboardCharts();
+  if (page === 'analysis') initAnalysisCharts();
+  if (page === 'progress') initProgressCharts();
+}
+
+// ========== MODAL ==========
+function showAddTrainingModal() {
+  document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-add-training').classList.add('show');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+function saveTraining() {
+  const date = document.getElementById('form-date').value;
+  const content = document.getElementById('form-content').value;
+  const duration = parseInt(document.getElementById('form-duration').value) || 0;
+  const score = parseInt(document.getElementById('form-score').value) || 0;
+  const note = document.getElementById('form-note').value;
+  if (!date || !content) { showToast('请填写日期和内容', 'error'); return; }
+  const records = getRecords();
+  records.unshift({ id: 'r' + Date.now(), date, content, duration, score: Math.min(100, Math.max(0, score)), note, tags: [] });
+  saveRecords(records);
+  closeModal('modal-add-training');
+  showToast('训练记录已保存', 'success');
+  renderTrainingList();
+  updateDashboardStats();
+}
+
+// ========== TRAINING LIST ==========
+function renderTrainingList() {
+  const records = getRecords();
+  const container = document.getElementById('training-list');
+  if (!records.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><h3>暂无训练记录</h3><p>点击"新增训练"开始记录</p></div>'; return; }
+  container.innerHTML = records.map(r => {
+    const d = new Date(r.date);
+    const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    const scoreClass = r.score >= 80 ? 'score-excellent' : r.score >= 60 ? 'score-good' : r.score >= 40 ? 'score-average' : 'score-poor';
+    return '<div class="training-card">' +
+      '<div class="training-date"><div class="day">' + d.getDate() + '</div><div class="month">' + months[d.getMonth()] + '</div></div>' +
+      '<div class="training-info"><h3>' + r.content + '</h3><p>' + (r.note || '') + '</p>' +
+      '<div class="training-tags">' + (r.tags || []).map(t => '<span class="tag primary">' + t + '</span>').join('') +
+      '<span class="tag">' + r.duration + '分钟</span></div></div>' +
+      '<div class="training-score"><div class="stat-value ' + scoreClass + '" style="font-size:28px">' + r.score + '</div><div class="stat-label">AI评分</div></div></div>';
+  }).join('');
+}
+
+// ========== DASHBOARD ==========
+function updateDashboardStats() {
+  const records = getRecords();
+  const total = records.length;
+  const avgScore = total ? Math.round(records.reduce((s, r) => s + r.score, 0) / total) : 0;
+  const best = total ? Math.max(...records.map(r => r.score)) : 0;
+  const hours = (records.reduce((s, r) => s + (r.duration || 0), 0) / 60).toFixed(1);
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-score').textContent = avgScore;
+  document.getElementById('stat-best').textContent = best;
+  document.getElementById('stat-hours').textContent = hours + 'h';
+  document.getElementById('welcome-count').textContent = total;
+  document.getElementById('welcome-score').textContent = avgScore;
+}
+
+let chartInstances = {};
+function destroyChart(key) { if (chartInstances[key]) { chartInstances[key].destroy(); delete chartInstances[key]; } }
+
+function initDashboardCharts() {
+  const records = getRecords();
+  // Score trend
+  destroyChart('scoreTrend');
+  const scoreCtx = document.getElementById('chart-score-trend');
+  if (scoreCtx) {
+    const recent = records.slice(0, 10).reverse();
+    chartInstances.scoreTrend = new Chart(scoreCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: recent.map(r => r.date.slice(5)),
+        datasets: [{ label: '评分', data: recent.map(r => r.score), borderColor: '#007AFF', backgroundColor: 'rgba(0,122,255,0.1)', borderWidth: 2.5, tension: 0.4, fill: true, pointRadius: 4, pointBackgroundColor: '#007AFF' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { grid: { display: false } } } }
+    });
+  }
+  // Skill distribution
+  destroyChart('skillDist');
+  const skillCtx = document.getElementById('chart-skill-dist');
+  if (skillCtx) {
+    chartInstances.skillDist = new Chart(skillCtx.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['正手', '反手', '发球', '步法', '搓球'],
+        datasets: [{ data: [35, 25, 15, 15, 10], backgroundColor: ['#007AFF', '#5856D6', '#FF9F0A', '#30D158', '#FF453A'], borderWidth: 0, borderRadius: 4 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } } } }
+    });
+  }
+  // Activity list
+  const actList = document.getElementById('activity-list');
+  if (actList) {
+    const activities = [
+      { dot: 'orange', text: '<strong>正手攻球</strong> 训练完成，评分 82', time: '2 小时前' },
+      { dot: 'blue', text: '<strong>反手拨球</strong> 训练完成，评分 75', time: '昨天' },
+      { dot: 'green', text: '<strong>发球变化</strong> 训练完成，评分 68', time: '2 天前' },
+      { dot: 'orange', text: '<strong>步法移动</strong> 训练完成，评分 85', time: '3 天前' },
+    ];
+    actList.innerHTML = activities.map(a =>
+      '<div class="activity-item"><div class="activity-dot ' + a.dot + '"></div><div><div class="activity-text">' + a.text + '</div><div class="activity-time">' + a.time + '</div></div></div>'
+    ).join('');
+  }
+}
+
+function initAnalysisCharts() {
+  destroyChart('radar');
+  const radarCtx = document.getElementById('chart-radar');
+  if (radarCtx) {
+    chartInstances.radar = new Chart(radarCtx.getContext('2d'), {
+      type: 'radar',
+      data: {
+        labels: ['正手攻球', '反手拨球', '发球技术', '搓球控制', '步法移动', '弧圈球'],
+        datasets: [
+          { label: '当前水平', data: [85, 75, 65, 72, 85, 78], borderColor: '#007AFF', backgroundColor: 'rgba(0,122,255,0.15)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#007AFF' },
+          { label: '目标水平', data: [90, 85, 80, 85, 90, 85], borderColor: '#5856D6', backgroundColor: 'rgba(88,86,214,0.1)', borderWidth: 2, borderDash: [5, 5], pointRadius: 3, pointBackgroundColor: '#5856D6' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { display: false }, pointLabels: { font: { size: 12, family: "'Noto Sans SC'" } } } }, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    });
+  }
+}
+
+function initProgressCharts() {
+  destroyChart('growth');
+  const growthCtx = document.getElementById('chart-growth');
+  if (growthCtx) {
+    chartInstances.growth = new Chart(growthCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: ['1月', '2月', '3月', '4月', '5月'],
+        datasets: [{ label: '平均评分', data: [60, 65, 70, 74, 78], borderColor: '#30D158', backgroundColor: 'rgba(48,209,88,0.1)', borderWidth: 2.5, tension: 0.4, fill: true, pointRadius: 5, pointBackgroundColor: '#30D158' }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { grid: { display: false } } } }
+    });
+  }
+  destroyChart('progress');
+  const progCtx = document.getElementById('chart-progress');
+  if (progCtx) {
+    chartInstances.progress = new Chart(progCtx.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: ['正手攻球', '反手拨球', '发球', '搓球', '步法'],
+        datasets: [{ label: '当前', data: [85, 75, 65, 72, 85], backgroundColor: 'rgba(0,122,255,0.6)', borderRadius: 6 }, { label: '上月', data: [78, 68, 60, 65, 80], backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 6 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { grid: { display: false } } } }
+    });
+  }
+}
+
+// ========== SKELETON DRAWING ==========
+function drawSkeleton(ctx, landmarks, w, h, options) {
+  options = options || {};
+  const color = options.color || '#007AFF';
+  const highlightJoints = options.highlightJoints || {};
+
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = color;
+  SKELETON_CONNECTIONS.forEach(([a, b]) => {
+    const la = landmarks[a], lb = landmarks[b];
+    if (!la || !lb || la.visibility < 0.3 || lb.visibility < 0.3) return;
+    ctx.beginPath();
+    ctx.moveTo(la.x * w, la.y * h);
+    ctx.lineTo(lb.x * w, lb.y * h);
+    ctx.stroke();
+  });
+
+  // Joint dots
+  for (let i = 0; i < landmarks.length; i++) {
+    const lm = landmarks[i];
+    if (!lm || lm.visibility < 0.3) continue;
+    const hl = highlightJoints[i];
+    if (hl) {
+      ctx.fillStyle = hl.level === 'danger' ? '#FF453A' : hl.level === 'warning' ? '#FF9F0A' : '#30D158';
+      ctx.beginPath();
+      ctx.arc(lm.x * w, lm.y * h, 5, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(lm.x * w, lm.y * h, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ========== MOTION CAMERA ==========
+class MotionCamera {
+  constructor() { this.isRunning = false; this.poseLandmarker = null; this.onPoseResult = null; this._standardOverlay = null; this._highlightJoints = {}; }
+
+  async init() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
+      const video = document.getElementById('camera-video');
+      video.srcObject = stream;
+      video.style.display = 'block';
+      document.getElementById('video-placeholder').style.display = 'none';
+      await video.play();
+      this.isRunning = true;
+
+      // Try to load MediaPipe
+      try {
+        const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14');
+        const { PoseLandmarker, FilesetResolver } = vision;
+        const filesetResolver = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
+        this.poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        this._detectLoop();
+      } catch (err) {
+        console.warn('MediaPipe Pose 加载失败，摄像头已开启但无骨骼检测:', err);
+      }
+
+      document.getElementById('btn-camera').innerHTML = '<i class="fa-solid fa-camera-slash"></i> 关闭摄像头';
+      document.getElementById('btn-record').disabled = false;
+    } catch (err) {
+      showToast('摄像头访问失败: ' + err.message, 'error');
+    }
+  }
+
+  _detectLoop() {
+    if (!this.isRunning || !this.poseLandmarker) return;
+    const video = document.getElementById('camera-video');
+    const canvas = document.getElementById('pose-canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const result = this.poseLandmarker.detectForVideo(video, performance.now());
+    if (result.landmarks && result.landmarks.length > 0) {
+      const landmarks = result.landmarks[0];
+      const worldLandmarks = result.worldLandmarks ? result.worldLandmarks[0] : null;
+
+      // Draw standard overlay first
+      if (this._standardOverlay) {
+        drawSkeleton(ctx, this._standardOverlay, canvas.width, canvas.height, { color: 'rgba(88,86,214,0.5)' });
+      }
+
+      // Draw user skeleton
+      drawSkeleton(ctx, landmarks, canvas.width, canvas.height, { highlightJoints: this._highlightJoints });
+
+      if (this.onPoseResult) this.onPoseResult(landmarks, worldLandmarks, performance.now());
+    }
+
+    requestAnimationFrame(() => this._detectLoop());
+  }
+
+  setRealtimeHighlight(highlights) { this._highlightJoints = highlights; }
+  setStandardOverlay(show, landmarks) { this._standardOverlay = show ? landmarks : null; }
+
+  close() {
+    this.isRunning = false;
+    const video = document.getElementById('camera-video');
+    if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+    video.style.display = 'none';
+    document.getElementById('video-placeholder').style.display = 'flex';
+    document.getElementById('btn-camera').innerHTML = '<i class="fa-solid fa-camera"></i> 开启摄像头';
+    document.getElementById('btn-record').disabled = true;
+    const canvas = document.getElementById('pose-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+// ========== MOTION RECORDER ==========
+class MotionRecorder {
+  constructor() { this.isRecording = false; this.frames = []; this.startTime = 0; }
+  start() { this.isRecording = true; this.frames = []; this.startTime = performance.now(); }
+  onFrame(landmarks) { if (!this.isRecording) return; this.frames.push({ landmarks: landmarks.map(l => ({...l})), timestamp: performance.now() - this.startTime }); }
+  stop() { this.isRecording = false; return this.frames; }
+  extractKeyFrames() {
+    if (this.frames.length < 5) return null;
+    const phases = ['ready', 'backswing', 'hit', 'follow_through', 'recovery'];
+    const totalFrames = this.frames.length;
+    const keyFrames = [];
+    const boundaries = [0, 0.15, 0.35, 0.55, 0.75];
+    for (let i = 0; i < 5; i++) {
+      const start = Math.floor(boundaries[i] * totalFrames);
+      const end = i < 4 ? Math.floor(boundaries[i + 1] * totalFrames) : totalFrames;
+      const mid = Math.floor((start + end) / 2);
+      const stable = this._findMostStableFrame(start, Math.min(end, totalFrames - 1));
+      keyFrames.push({ phase: phases[i], frameIndex: stable, landmarks: this.frames[stable].landmarks });
+    }
+    return keyFrames;
+  }
+  _findMostStableFrame(start, end) {
+    let bestIdx = start, minVariance = Infinity;
+    for (let i = start; i <= end; i++) {
+      let variance = 0;
+      for (const lm of this.frames[i].landmarks) { variance += Math.pow(lm.visibility || 1, 2); }
+      if (variance < minVariance) { minVariance = variance; bestIdx = i; }
+    }
+    return bestIdx;
+  }
+}
+
+// ========== MOTION ANALYZER ==========
+class MotionAnalyzer {
+  calculateJointAngle(a, b, c) {
+    const ba = { x: a.x - b.x, y: a.y - b.y, z: (a.z || 0) - (b.z || 0) };
+    const bc = { x: c.x - b.x, y: c.y - b.y, z: (c.z || 0) - (b.z || 0) };
+    const dot = ba.x * bc.x + ba.y * bc.y + ba.z * bc.z;
+    const magBA = Math.sqrt(ba.x * ba.x + ba.y * ba.y + ba.z * ba.z);
+    const magBC = Math.sqrt(bc.x * bc.x + bc.y * bc.y + bc.z * bc.z);
+    if (magBA === 0 || magBC === 0) return 0;
+    const cosAngle = Math.max(-1, Math.min(1, dot / (magBA * magBC)));
+    return Math.acos(cosAngle) * (180 / Math.PI);
+  }
+
+  calculateJointScore(userAngle, standardAngle) {
+    const deviation = Math.abs(userAngle - standardAngle);
+    if (deviation <= 5) return 100;
+    if (deviation <= 15) return 100 - (deviation - 5) * 5;
+    if (deviation <= 30) return 50 - (deviation - 15) * 2;
+    return Math.max(20, 20 - (deviation - 30));
+  }
+
+  calculateOverallScore(jointScores) {
+    const dimScores = {};
+    const dimWeights = {};
+    for (const js of jointScores) {
+      const dim = js.dimension;
+      if (!dimScores[dim]) { dimScores[dim] = 0; dimWeights[dim] = 0; }
+      dimScores[dim] += js.score * js.weight;
+      dimWeights[dim] += js.weight;
+    }
+    let totalWeighted = 0, totalWeight = 0;
+    for (const dim in dimScores) {
+      const avg = dimScores[dim] / dimWeights[dim];
+      dimScores[dim] = Math.round(avg);
+      totalWeighted += avg * dimWeights[dim];
+      totalWeight += dimWeights[dim];
+    }
+    return { overallScore: Math.round(totalWeighted / totalWeight), dimensionScores: dimScores };
+  }
+
+  analyze(userKeyFrames, standardKeyFrames, motionName) {
+    const phaseNames = { ready: '准备', backswing: '引拍', hit: '击球', follow_through: '随挥', recovery: '还原' };
+    const phases = [];
+    for (let i = 0; i < 5; i++) {
+      const userKF = userKeyFrames[i];
+      const stdKF = standardKeyFrames[i];
+      if (!userKF || !stdKF) continue;
+      const joints = [];
+      for (const jm of JOINT_ANGLE_MAP) {
+        const ua = userKF.landmarks;
+        if (!ua[jm.a] || !ua[jm.b] || !ua[jm.c]) continue;
+        const userAngle = this.calculateJointAngle(ua[jm.a], ua[jm.b], ua[jm.c]);
+        const stdAngle = stdKF.joints[jm.jointId] || 0;
+        const score = this.calculateJointScore(userAngle, stdAngle);
+        const deviation = Math.abs(userAngle - stdAngle);
+        const level = deviation <= 5 ? 'good' : deviation <= 15 ? 'warning' : 'danger';
+        joints.push({ jointId: jm.jointId, jointName: jm.jointName, userAngle: Math.round(userAngle), standardAngle: Math.round(stdAngle), score: Math.round(score), deviation: Math.round(deviation), level, dimension: jm.dimension, weight: jm.weight });
+      }
+      phases.push({ phaseName: phaseNames[stdKF.phase] || stdKF.phase, joints });
+    }
+    const allJoints = phases.flatMap(p => p.joints);
+    const { overallScore, dimensionScores } = this.calculateOverallScore(allJoints);
+    return { overallScore, dimensionScores, phases, motionName, timestamp: Date.now(), keyFramesData: { user: userKeyFrames, standard: standardKeyFrames } };
+  }
+
+  analyzeRealtimeFrame(landmarks, standardMotion, currentPhase) {
+    const stdKF = standardMotion.keyFrames.find(kf => kf.phase === currentPhase);
+    if (!stdKF) return {};
+    const highlights = {};
+    for (const jm of JOINT_ANGLE_MAP) {
+      if (!landmarks[jm.a] || !landmarks[jm.b] || !landmarks[jm.c]) continue;
+      const userAngle = this.calculateJointAngle(landmarks[jm.a], landmarks[jm.b], landmarks[jm.c]);
+      const stdAngle = stdKF.joints[jm.jointId] || 0;
+      const deviation = Math.abs(userAngle - stdAngle);
+      const level = deviation <= 5 ? 'good' : deviation <= 15 ? 'warning' : 'danger';
+      highlights[jm.b] = { level, deviation: Math.round(deviation) };
+    }
+    return highlights;
+  }
+}
+
+// ========== ADVICE ENGINE ==========
+class AdviceEngine {
+  generateAdvices(compareResult) {
+    const advices = [];
+    const dims = compareResult.dimensionScores || {};
+    for (const rule of ADVICE_RULES) {
+      const score = dims[rule.dimension] || 0;
+      let level, title, description;
+      if (score >= rule.good.min) { level = 'good'; title = rule.good.msg.split('，')[0]; description = rule.good.msg; }
+      else if (score >= rule.warning.min) { level = 'warning'; title = rule.warning.msg.split('，')[0]; description = rule.warning.msg; }
+      else { level = 'danger'; title = rule.danger.msg.split('，')[0]; description = rule.danger.msg; }
+      advices.push({ dimension: rule.dimension, level, title, description, exerciseSuggestion: rule.exercise });
+    }
+    return advices.sort((a, b) => { const order = { danger: 0, warning: 1, good: 2 }; return order[a.level] - order[b.level]; });
+  }
+
+  generateTrainingPlan(compareResult) {
+    const dims = compareResult.dimensionScores || {};
+    const weakDims = Object.entries(dims).filter(([, s]) => s < 75).map(([d]) => d);
+    const weeks = [];
+    const exercises = {
+      shoulder: ['转肩挥拍空击 3×20', '肩部绕环热身 3×15', '持拍转肩练习 3×10'],
+      elbow: ['前臂屈伸训练 3×15', '肘部定型慢动作 3×10', '对墙击球练习 3×20'],
+      wrist: ['腕力器训练 3×20', '甩腕弹击多球 3×15', '手腕绕8字 3×10'],
+      hip: ['转胯空击 3×20', '侧滑步转胯 3×15', '弓步转体 3×10'],
+      knee: ['深蹲起 3×15', '侧向跳跃 3×10', '台阶上下 3×20'],
+    };
+    const allExercises = weakDims.length > 0 ? weakDims : Object.keys(dims);
+    for (let w = 0; w < 3; w++) {
+      const days = [];
+      for (let d = 1; d <= 7; d++) {
+        if (d === 4 || d === 7) { days.push({ day: d, rest: true }); continue; }
+        const dimIdx = (d - 1 + w) % allExercises.length;
+        const dim = allExercises[dimIdx];
+        const exList = exercises[dim] || exercises.shoulder;
+        days.push({ day: d, rest: false, title: exList[w % exList.length] });
+      }
+      weeks.push({ title: '第 ' + (w + 1) + ' 周', goal: w === 0 ? '建立基础动作模式' : w === 1 ? '强化弱项技术' : '巩固提高', days });
+    }
+    return { weeklyPlans: weeks };
+  }
+}
+
+// ========== MOTION COMPARE UI ==========
+class MotionCompareUI {
+  constructor() {
+    this.camera = new MotionCamera();
+    this.recorder = new MotionRecorder();
+    this.analyzer = new MotionAnalyzer();
+    this.adviceEngine = new AdviceEngine();
+    this.selectedMotion = 'forehand_attack';
+    this.lastCompareResult = null;
+    this.isRealtimeCompare = false;
+    this._trendChartInstance = null;
+    this._bindEvents();
+    this._renderMotionSelector();
+  }
+
+  _bindEvents() {}
+
+  _renderMotionSelector() {
+    const container = document.getElementById('motion-selector');
+    container.innerHTML = MOTION_CATEGORIES.map(cat =>
+      '<div class="motion-category-title">' + cat.title + '</div>' +
+      cat.items.map(key => {
+        const motion = MALONG_STANDARD_DATA[key];
+        return '<div class="motion-option' + (key === this.selectedMotion ? ' active' : '') + '" data-motion="' + key + '" onclick="motionCompareUI._selectMotion(\'' + key + '\')">' + (motion ? motion.name : key) + '</div>';
+      }).join('')
+    ).join('');
+  }
+
+  _selectMotion(key) {
+    this.selectedMotion = key;
+    document.querySelectorAll('.motion-option').forEach(el => el.classList.remove('active'));
+    document.querySelector('.motion-option[data-motion="' + key + '"]').classList.add('active');
+    const motion = MALONG_STANDARD_DATA[key];
+    if (motion) {
+      document.getElementById('standard-desc').textContent = motion.desc;
+      document.getElementById('standard-placeholder').style.display = 'none';
+      this._drawStandardSkeleton(motion);
+    }
+  }
+
+  _drawStandardSkeleton(motion) {
+    const canvas = document.getElementById('standard-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 640; canvas.height = 480;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Draw hit phase skeleton
+    const hitKF = motion.keyFrames[2];
+    if (hitKF) {
+      const landmarks = this._generateStandardLandmarks(hitKF);
+      if (landmarks) drawSkeleton(ctx, landmarks, canvas.width, canvas.height, { color: 'rgba(88,86,214,0.8)' });
+    }
+    // Label
+    ctx.fillStyle = 'rgba(88,86,214,0.9)';
+    ctx.font = '600 14px "Noto Sans SC"';
+    ctx.fillText(motion.name + ' - 击球阶段', 16, 28);
+  }
+
+  _generateStandardLandmarks(standardKF) {
+    if (!standardKF) return null;
+    const joints = standardKF.joints;
+    const pts = [];
+    for (let i = 0; i < 33; i++) pts.push({ x: 0.5, y: 0.5, z: 0, visibility: 1 });
+    const degToRad = Math.PI / 180;
+    pts[0] = { x: 0.5, y: 0.12, z: 0, visibility: 1 };
+    pts[11] = { x: 0.38, y: 0.28, z: 0, visibility: 1 };
+    pts[12] = { x: 0.62, y: 0.28, z: 0, visibility: 1 };
+    pts[23] = { x: 0.42, y: 0.58, z: 0, visibility: 1 };
+    pts[24] = { x: 0.58, y: 0.58, z: 0, visibility: 1 };
+    const armLen = 0.18, foreLen = 0.16;
+    // Right arm
+    const rSA = (joints.right_shoulder || 45) * degToRad;
+    pts[14] = { x: pts[12].x + armLen * Math.cos(rSA), y: pts[12].y + armLen * Math.sin(rSA), z: 0, visibility: 1 };
+    const rEA = (joints.right_elbow || 130) * degToRad;
+    const eDx = pts[14].x - pts[12].x, eDy = pts[14].y - pts[12].y;
+    const eBase = Math.atan2(eDy, eDx);
+    pts[16] = { x: pts[14].x + foreLen * Math.cos(eBase + (Math.PI - rEA) * 0.5), y: pts[14].y + foreLen * Math.sin(eBase + (Math.PI - rEA) * 0.5), z: 0, visibility: 1 };
+    pts[20] = { x: pts[16].x + 0.02, y: pts[16].y + 0.02, z: 0, visibility: 1 };
+    pts[18] = { x: pts[16].x - 0.01, y: pts[16].y + 0.03, z: 0, visibility: 1 };
+    pts[22] = { x: pts[16].x + 0.01, y: pts[16].y - 0.01, z: 0, visibility: 1 };
+    // Left arm
+    const lSA = (joints.left_shoulder || 20) * degToRad;
+    pts[13] = { x: pts[11].x - armLen * Math.cos(lSA), y: pts[11].y + armLen * Math.sin(lSA), z: 0, visibility: 1 };
+    const lEA = (joints.left_elbow || 90) * degToRad;
+    const lDx = pts[13].x - pts[11].x, lDy = pts[13].y - pts[11].y;
+    const lBase = Math.atan2(lDy, lDx);
+    pts[15] = { x: pts[13].x + foreLen * Math.cos(lBase - (Math.PI - lEA) * 0.5), y: pts[13].y + foreLen * Math.sin(lBase - (Math.PI - lEA) * 0.5), z: 0, visibility: 1 };
+    pts[19] = { x: pts[15].x - 0.02, y: pts[15].y + 0.02, z: 0, visibility: 1 };
+    pts[17] = { x: pts[15].x + 0.01, y: pts[15].y + 0.03, z: 0, visibility: 1 };
+    pts[21] = { x: pts[15].x - 0.01, y: pts[15].y - 0.01, z: 0, visibility: 1 };
+    // Legs
+    const legLen = 0.22, shinLen = 0.2;
+    const rHA = (joints.right_hip || 165) * degToRad;
+    pts[26] = { x: pts[24].x + legLen * Math.cos(rHA - Math.PI / 2 + 0.15), y: pts[24].y + legLen * Math.sin(rHA - Math.PI / 2 + 0.15), z: 0, visibility: 1 };
+    const rKA = (joints.right_knee || 165) * degToRad;
+    const rkDx = pts[26].x - pts[24].x, rkDy = pts[26].y - pts[24].y;
+    const rkBase = Math.atan2(rkDy, rkDx);
+    pts[28] = { x: pts[26].x + shinLen * Math.cos(rkBase + (Math.PI - rKA) * 0.3), y: pts[26].y + shinLen * Math.abs(Math.sin(rkBase + 0.1)), z: 0, visibility: 1 };
+    const lHA = (joints.left_hip || 175) * degToRad;
+    pts[25] = { x: pts[23].x - legLen * Math.cos(lHA - Math.PI / 2 + 0.15), y: pts[23].y + legLen * Math.sin(lHA - Math.PI / 2 + 0.15), z: 0, visibility: 1 };
+    const lKA = (joints.left_knee || 175) * degToRad;
+    const lkDx = pts[25].x - pts[23].x, lkDy = pts[25].y - pts[23].y;
+    const lkBase = Math.atan2(lkDy, lkDx);
+    pts[27] = { x: pts[25].x + shinLen * Math.cos(lkBase - (Math.PI - lKA) * 0.3), y: pts[25].y + shinLen * Math.abs(Math.sin(lkBase + 0.1)), z: 0, visibility: 1 };
+    // Feet
+    pts[29] = { x: pts[27].x - 0.02, y: pts[27].y + 0.02, z: 0, visibility: 1 };
+    pts[31] = { x: pts[27].x + 0.02, y: pts[27].y + 0.02, z: 0, visibility: 1 };
+    pts[30] = { x: pts[28].x + 0.02, y: pts[28].y + 0.02, z: 0, visibility: 1 };
+    pts[32] = { x: pts[28].x - 0.02, y: pts[28].y + 0.02, z: 0, visibility: 1 };
+    // Head details
+    pts[1] = { x: 0.5, y: 0.16, z: 0, visibility: 1 };
+    pts[2] = { x: 0.5, y: 0.19, z: 0, visibility: 1 };
+    pts[3] = { x: 0.5, y: 0.14, z: 0, visibility: 1 };
+    pts[4] = { x: 0.48, y: 0.12, z: 0, visibility: 1 };
+    pts[5] = { x: 0.52, y: 0.12, z: 0, visibility: 1 };
+    pts[6] = { x: 0.46, y: 0.13, z: 0, visibility: 1 };
+    pts[7] = { x: 0.54, y: 0.13, z: 0, visibility: 1 };
+    pts[8] = { x: 0.5, y: 0.16, z: 0, visibility: 1 };
+    pts[9] = { x: 0.48, y: 0.16, z: 0, visibility: 1 };
+    pts[10] = { x: 0.52, y: 0.16, z: 0, visibility: 1 };
+    return pts;
+  }
+
+  onPageEnter() {
+    this._renderHistoryList();
+    this._renderTrendChart();
+    const motion = MALONG_STANDARD_DATA[this.selectedMotion];
+    if (motion) { this._drawStandardSkeleton(motion); }
+  }
+
+  toggleCamera() {
+    if (this.camera.isRunning) { this.camera.close(); }
+    else { this.camera.init(); }
+  }
+
+  startRecording() {
+    if (!this.camera.isRunning) { showToast('请先开启摄像头', ''); return; }
+    this.recorder.start();
+    this.camera.onPoseResult = (landmarks) => { this.recorder.onFrame(landmarks); };
+    document.getElementById('btn-record').style.display = 'none';
+    document.getElementById('btn-stop').style.display = 'inline-flex';
+    showToast('录制中...请完成一组完整动作', '');
+  }
+
+  stopRecording() {
+    const frames = this.recorder.stop();
+    this.camera.onPoseResult = null;
+    document.getElementById('btn-record').style.display = 'inline-flex';
+    document.getElementById('btn-stop').style.display = 'none';
+    if (frames.length < 10) { showToast('录制时间太短，请重新录制', 'error'); return; }
+    this._runAnalysis(frames);
+  }
+
+  _runAnalysis(frames) {
+    const motion = MALONG_STANDARD_DATA[this.selectedMotion];
+    if (!motion) { showToast('未选择动作', 'error'); return; }
+
+    // Extract key frames from recorded frames
+    const phases = ['ready', 'backswing', 'hit', 'follow_through', 'recovery'];
+    const totalFrames = frames.length;
+    const boundaries = [0, 0.15, 0.35, 0.55, 0.75];
+    const userKeyFrames = [];
+    for (let i = 0; i < 5; i++) {
+      const start = Math.floor(boundaries[i] * totalFrames);
+      const end = i < 4 ? Math.floor(boundaries[i + 1] * totalFrames) : totalFrames;
+      const mid = Math.min(Math.floor((start + end) / 2), totalFrames - 1);
+      userKeyFrames.push({ phase: phases[i], frameIndex: mid, landmarks: frames[mid].landmarks });
+    }
+
+    const result = this.analyzer.analyze(userKeyFrames, motion.keyFrames, motion.name);
+    result.advices = this.adviceEngine.generateAdvices(result);
+    this.lastCompareResult = result;
+
+    // Save to history
+    const history = getMotionHistory();
+    history.unshift({ id: 'h' + Date.now(), motionName: result.motionName, overallScore: result.overallScore, dimensionScores: result.dimensionScores, timestamp: result.timestamp });
+    saveMotionHistory(history);
+
+    this._renderCompareResult(result);
+    this._renderHistoryList();
+    this._renderTrendChart();
+    showToast('分析完成！综合评分: ' + result.overallScore, 'success');
+  }
+
+  _renderCompareResult(result) {
+    document.getElementById('motion-result-panel').style.display = 'block';
+    this._renderScoreRing(result.overallScore);
+    this._renderDimensionBars(result.dimensionScores);
+    this._renderJointList(result.phases);
+    this._renderAdvicePanel(result.advices);
+  }
+
+  _renderScoreRing(score) {
+    const ring = document.getElementById('motion-score-ring');
+    const scoreEl = document.getElementById('motion-score-number');
+    let color;
+    if (score >= 80) color = 'var(--success)';
+    else if (score >= 60) color = 'var(--primary)';
+    else if (score >= 40) color = 'var(--warning)';
+    else color = 'var(--danger)';
+    const pct = score;
+    ring.style.background = 'conic-gradient(' + color + ' 0%, ' + color + ' ' + pct + '%, rgba(255,255,255,0.1) ' + pct + '%, rgba(255,255,255,0.1) 100%)';
+    let current = 0;
+    const step = Math.max(1, Math.floor(score / 30));
+    const timer = setInterval(() => {
+      current += step;
+      if (current >= score) { current = score; clearInterval(timer); }
+      scoreEl.textContent = current;
+    }, 30);
+  }
+
+  _renderDimensionBars(dimensionScores) {
+    const container = document.getElementById('motion-dimension-scores');
+    container.innerHTML = Object.entries(dimensionScores).map(([dim, score]) => {
+      const color = DIMENSION_COLORS[dim] || 'var(--primary)';
+      const name = DIMENSION_NAMES[dim] || dim;
+      return '<div class="motion-dimension-item"><div class="dim-name">' + name + '</div><div class="dim-score" style="color:' + color + '">' + score + '</div><div class="dim-bar"><div class="dim-bar-fill" style="width:' + score + '%;background:' + color + '"></div></div></div>';
+    }).join('');
+  }
+
+  _renderJointList(phases) {
+    const container = document.getElementById('motion-joint-list');
+    const allJoints = phases.flatMap(p => p.joints);
+    // Show unique joints (average across phases)
+    const jointMap = {};
+    for (const jc of allJoints) {
+      if (!jointMap[jc.jointId]) jointMap[jc.jointId] = { ...jc, scores: [jc.score] };
+      else jointMap[jc.jointId].scores.push(jc.score);
+    }
+    container.innerHTML = Object.values(jointMap).map(jc => {
+      const avgScore = Math.round(jc.scores.reduce((a, b) => a + b, 0) / jc.scores.length);
+      const level = avgScore >= 80 ? 'good' : avgScore >= 50 ? 'warning' : 'danger';
+      return '<div class="motion-joint-item"><span class="motion-joint-name">' + jc.jointName + '</span><div class="motion-joint-angles"><span>你: ' + jc.userAngle + '\u00B0</span><span>标准: ' + jc.standardAngle + '\u00B0</span></div><div class="motion-joint-bar"><div class="motion-joint-bar-fill ' + level + '" style="width:' + avgScore + '%"></div></div><span class="motion-joint-deviation ' + level + '">' + jc.deviation + '\u00B0</span></div>';
+    }).join('');
+  }
+
+  _renderAdvicePanel(advices) {
+    const container = document.getElementById('motion-advice-panel');
+    container.innerHTML = advices.map(a => {
+      const levelText = a.level === 'good' ? '\u2713 良好' : a.level === 'warning' ? '\u26A0 需改善' : '\u2715 偏差大';
+      return '<div class="motion-advice-item ' + a.dimension + '"><div class="advice-header"><span class="advice-title">' + a.title + '</span><span class="advice-level ' + a.level + '">' + levelText + '</span></div><div class="advice-desc">' + a.description + '</div><div class="advice-exercise"><i class="fa-solid fa-dumbbell"></i> ' + a.exerciseSuggestion + '</div></div>';
+    }).join('');
+  }
+
+  generateTrainingPlan() {
+    if (!this.lastCompareResult) { showToast('请先完成一次对比分析', ''); return; }
+    const plan = this.adviceEngine.generateTrainingPlan(this.lastCompareResult);
+    this._renderTrainingPlan(plan);
+  }
+
+  _renderTrainingPlan(plan) {
+    const container = document.getElementById('motion-training-plan');
+    const dayNames = ['\u4E00', '\u4E8C', '\u4E09', '\u56DB', '\u4E94', '\u516D', '\u65E5'];
+    container.innerHTML = plan.weeklyPlans.map(week =>
+      '<div class="motion-plan-week"><div class="week-title">' + week.title + '</div><div class="week-goal">' + week.goal + '</div><div class="motion-plan-days">' +
+      week.days.map(day =>
+        '<div class="motion-plan-day ' + (day.rest ? 'rest' : 'train') + '"><div class="day-label">\u5468' + dayNames[day.day - 1] + '</div><div class="day-exercise">' + (day.rest ? '\uD83D\uDE34 \u4F11\u606F' : day.title) + '</div></div>'
+      ).join('') + '</div></div>'
+    ).join('');
+  }
+
+  showSplitView() {
+    if (!this.lastCompareResult) { showToast('请先完成一次对比分析', ''); return; }
+    const result = this.lastCompareResult;
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    modal.style.zIndex = '1001';
+    modal.innerHTML = '<div class="modal" style="max-width:900px"><div class="modal-header"><h3>\u5206\u5C4F\u5BF9\u6BD4 - ' + result.motionName + '</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()"><i class="fa-solid fa-times"></i></button></div><div class="modal-body"><div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">' +
+      result.phases.map((p, i) => '<button class="btn ' + (i === 0 ? 'btn-primary' : 'btn-outline') + '" onclick="motionCompareUI._renderSplitPhase(' + i + ')" data-phase-btn="' + i + '">' + p.phaseName + '</button>').join('') +
+      '</div><div class="motion-split-view" id="split-view-container"><div class="motion-split-half"><span class="split-label">\u4F60\u7684\u52A8\u4F5C</span><canvas class="motion-skeleton-canvas" id="split-canvas-user" width="400" height="300"></canvas></div><div class="motion-split-half"><span class="split-label">\u9A6C\u9F99\u6807\u51C6\u52A8\u4F5C</span><canvas class="motion-skeleton-canvas" id="split-canvas-standard" width="400" height="300"></canvas></div></div><div id="split-joint-detail" style="margin-top:16px"></div></div></div>';
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+    this._renderSplitPhase(0);
+  }
+
+  _renderSplitPhase(phaseIdx) {
+    const result = this.lastCompareResult;
+    if (!result) return;
+    const phase = result.phases[phaseIdx];
+    if (!phase) return;
+    document.querySelectorAll('[data-phase-btn]').forEach(btn => {
+      btn.className = 'btn ' + (parseInt(btn.dataset.phaseBtn) === phaseIdx ? 'btn-primary' : 'btn-outline');
+    });
+    // User skeleton
+    const uCanvas = document.getElementById('split-canvas-user');
+    const uCtx = uCanvas.getContext('2d');
+    uCtx.clearRect(0, 0, uCanvas.width, uCanvas.height);
+    uCtx.fillStyle = '#000'; uCtx.fillRect(0, 0, uCanvas.width, uCanvas.height);
+    const uFrame = result.keyFramesData.user[phaseIdx];
+    if (uFrame) {
+      const hl = {};
+      phase.joints.forEach(jc => { hl[jc.jointId] = { level: jc.level, deviation: jc.deviation }; });
+      drawSkeleton(uCtx, uFrame.landmarks, uCanvas.width, uCanvas.height, { highlightJoints: hl });
+    }
+    // Standard skeleton
+    const sCanvas = document.getElementById('split-canvas-standard');
+    const sCtx = sCanvas.getContext('2d');
+    sCtx.clearRect(0, 0, sCanvas.width, sCanvas.height);
+    sCtx.fillStyle = '#000'; sCtx.fillRect(0, 0, sCanvas.width, sCanvas.height);
+    const sLandmarks = this._generateStandardLandmarks(result.keyFramesData.standard[phaseIdx]);
+    if (sLandmarks) drawSkeleton(sCtx, sLandmarks, sCanvas.width, sCanvas.height, { color: 'rgba(88,86,214,0.8)' });
+    // Joint detail
+    const detailEl = document.getElementById('split-joint-detail');
+    if (detailEl) {
+      const issues = phase.joints.filter(jc => jc.level !== 'good');
+      detailEl.innerHTML = '<div class="card-title" style="font-size:12px"><i class="fa-solid fa-list" style="color:var(--accent)"></i> ' + phase.phaseName + '\u9636\u6BB5 - \u5173\u8282\u5DEE\u5F02</div>' +
+        (issues.length ? issues.map(jc =>
+          '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px"><span style="font-weight:600;width:50px;color:var(--text)">' + jc.jointName + '</span><span style="color:' + (jc.level === 'danger' ? 'var(--danger)' : 'var(--warning)') + '">\u504F\u5DEE ' + jc.deviation + '\u00B0</span><span style="color:var(--text-muted)">\u4F60:' + jc.userAngle + '\u00B0 \u6807\u51C6:' + jc.standardAngle + '\u00B0</span></div>'
+        ).join('') : '<p style="font-size:13px;color:var(--success)">\u2713 \u6B64\u9636\u6BB5\u52A8\u4F5C\u975E\u5E38\u89C4\u8303\uFF01</p>');
+    }
+  }
+
+  toggleRealtimeCompare() {
+    const btn = document.getElementById('btn-realtime-compare');
+    this.isRealtimeCompare = !this.isRealtimeCompare;
+    if (this.isRealtimeCompare) {
+      btn.classList.add('active');
+      if (!this.camera.isRunning) { showToast('请先开启摄像头', ''); this.isRealtimeCompare = false; btn.classList.remove('active'); return; }
+      const stdMotion = MALONG_STANDARD_DATA[this.selectedMotion];
+      const stdLM = this._generateStandardLandmarks(stdMotion.keyFrames[2]);
+      this.camera.setStandardOverlay(true, stdLM);
+      const phaseOrder = ['ready', 'backswing', 'hit', 'follow_through', 'recovery'];
+      let phaseCounter = 0;
+      this.camera.onPoseResult = (landmarks, worldLandmarks, timestamp) => {
+        const currentPhase = phaseOrder[phaseCounter % 5];
+        const highlights = this.analyzer.analyzeRealtimeFrame(landmarks, stdMotion, currentPhase);
+        this.camera.setRealtimeHighlight(highlights);
+        if (timestamp % 2000 < 50) phaseCounter++;
+      };
+    } else {
+      btn.classList.remove('active');
+      this.camera.setRealtimeHighlight({});
+      this.camera.setStandardOverlay(false, null);
+      this.camera.onPoseResult = null;
+    }
+  }
+
+  _renderHistoryList() {
+    const history = getMotionHistory();
+    const container = document.getElementById('motion-history-list');
+    if (!history.length) { container.innerHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">\uD83D\uDCCB</div><h3>\u6682\u65E0\u5BF9\u6BD4\u8BB0\u5F55</h3><p>\u5B8C\u6210\u4E00\u6B21\u52A8\u4F5C\u5BF9\u6BD4\u540E\u5C06\u663E\u793A\u5728\u6B64\u5904</p></div>'; return; }
+    container.innerHTML = history.map(record => {
+      const d = new Date(record.timestamp);
+      const dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      const timeStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      let scoreColor;
+      if (record.overallScore >= 80) scoreColor = 'var(--success)';
+      else if (record.overallScore >= 60) scoreColor = 'var(--primary)';
+      else if (record.overallScore >= 40) scoreColor = 'var(--warning)';
+      else scoreColor = 'var(--danger)';
+      const dims = record.dimensionScores || {};
+      const dimHtml = Object.entries(dims).map(([dim, score]) => {
+        const c = score >= 80 ? 'var(--success)' : score >= 60 ? 'var(--primary)' : score >= 40 ? 'var(--warning)' : 'var(--danger)';
+        return '<span class="history-dim" style="background:' + c + '20;color:' + c + '">' + (DIMENSION_NAMES[dim] || dim) + ' ' + score + '</span>';
+      }).join('');
+      return '<div class="motion-history-item" onclick="motionCompareUI._viewHistoryDetail(\'' + record.id + '\')"><div class="motion-history-score" style="background:' + scoreColor + '">' + record.overallScore + '</div><div class="motion-history-info"><div class="history-name">' + (record.motionName || '\u52A8\u4F5C\u5BF9\u6BD4') + '</div><div class="history-date">' + dateStr + ' ' + timeStr + '</div><div class="history-dims">' + dimHtml + '</div></div><button class="motion-history-delete" onclick="event.stopPropagation();motionCompareUI._deleteHistory(\'' + record.id + '\')"><i class="fa-solid fa-trash-can"></i></button></div>';
+    }).join('');
+  }
+
+  _viewHistoryDetail(id) {
+    const history = getMotionHistory();
+    const record = history.find(h => h.id === id);
+    if (!record) return;
+    const dimScores = record.dimensionScores || {};
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay show';
+    let scoreColor;
+    if (record.overallScore >= 80) scoreColor = 'var(--success)';
+    else if (record.overallScore >= 60) scoreColor = 'var(--primary)';
+    else scoreColor = 'var(--warning)';
+    modal.innerHTML = '<div class="modal"><div class="modal-header"><h3>' + record.motionName + ' - \u5BF9\u6BD4\u8BE6\u60C5</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()"><i class="fa-solid fa-times"></i></button></div><div class="modal-body"><div style="text-align:center;margin-bottom:16px"><div style="font-size:48px;font-weight:900;color:' + scoreColor + '">' + record.overallScore + '</div><div style="font-size:13px;color:var(--text-muted)">\u7EFC\u5408\u8BC4\u5206</div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+      Object.entries(dimScores).map(([dim, score]) => {
+        const name = DIMENSION_NAMES[dim] || dim;
+        const color = DIMENSION_COLORS[dim] || 'var(--primary)';
+        return '<div style="padding:10px;background:var(--bg-secondary);border-radius:8px"><div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">' + name + '</div><div style="font-size:20px;font-weight:900;color:' + color + '">' + score + '</div><div style="height:4px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:6px;overflow:hidden"><div style="width:' + score + '%;height:100%;background:' + color + ';border-radius:2px"></div></div></div>';
+      }).join('') +
+      '</div><div style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:center">' + new Date(record.timestamp).toLocaleString('zh-CN') + '</div></div></div>';
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
+  }
+
+  _deleteHistory(id) { deleteMotionHistory(id); this._renderHistoryList(); this._renderTrendChart(); showToast('\u8BB0\u5F55\u5DF2\u5220\u9664', ''); }
+
+  _renderTrendChart() {
+    const history = getMotionHistory();
+    const canvasEl = document.getElementById('motionTrendChart');
+    if (!canvasEl) return;
+    if (this._trendChartInstance) { this._trendChartInstance.destroy(); this._trendChartInstance = null; }
+    if (history.length < 2) { const ctx = canvasEl.getContext('2d'); ctx.clearRect(0, 0, canvasEl.width, canvasEl.height); return; }
+    const sorted = [...history].sort((a, b) => a.timestamp - b.timestamp);
+    const labels = sorted.map(r => { const d = new Date(r.timestamp); return (d.getMonth() + 1) + '/' + d.getDate(); });
+    const datasets = [{ label: '\u7EFC\u5408\u8BC4\u5206', data: sorted.map(r => r.overallScore), borderColor: '#007AFF', backgroundColor: 'rgba(0,122,255,0.1)', borderWidth: 2.5, tension: 0.4, pointRadius: 4, fill: true }];
+    ['shoulder', 'elbow', 'wrist', 'hip', 'knee'].forEach(dim => {
+      datasets.push({ label: DIMENSION_NAMES[dim], data: sorted.map(r => (r.dimensionScores && r.dimensionScores[dim]) || 0), borderColor: DIMENSION_COLORS[dim], borderWidth: 1.5, borderDash: [4, 4], tension: 0.4, pointRadius: 2, fill: false });
+    });
+    this._trendChartInstance = new Chart(canvasEl.getContext('2d'), {
+      type: 'line', data: { labels, datasets },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } }, scales: { y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.06)' } }, x: { grid: { display: false } } } }
+    });
+  }
+
+  exportReport() {
+    if (!this.lastCompareResult) { showToast('\u8BF7\u5148\u5B8C\u6210\u4E00\u6B21\u5BF9\u6BD4\u5206\u6790', ''); return; }
+    const result = this.lastCompareResult;
+    const dateStr = new Date(result.timestamp).toLocaleString('zh-CN');
+    const dimScores = result.dimensionScores || {};
+    const dimHtml = Object.entries(dimScores).map(([dim, score]) => {
+      const name = DIMENSION_NAMES[dim] || dim;
+      const color = score >= 80 ? '#30D158' : score >= 60 ? '#007AFF' : score >= 40 ? '#FF9F0A' : '#FF453A';
+      return '<div style="display:inline-block;margin:4px;padding:6px 14px;border-radius:8px;background:' + color + '20;color:' + color + ';font-weight:bold">' + name + ': ' + score + '\u5206</div>';
+    }).join(' ');
+    const adviceHtml = (result.advices || []).map(a =>
+      '<div style="padding:12px;margin:8px 0;border-left:4px solid ' + (a.level === 'danger' ? '#FF453A' : a.level === 'warning' ? '#FF9F0A' : '#30D158') + ';background:#f5f5f5;border-radius:4px"><strong>' + a.title + '</strong><p style="margin:4px 0;color:#666">' + a.description + '</p><p style="margin:0;color:#007AFF">\uD83D\uDCAA ' + a.exerciseSuggestion + '</p></div>'
+    ).join('');
+    const html = '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><title>\u52A8\u4F5C\u5BF9\u6BD4\u62A5\u544A - ' + result.motionName + '</title><style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:40px 20px;color:#1a1a2e}h1{color:#5856D6}h2{color:#007AFF;border-bottom:2px solid #007AFF;padding-bottom:8px}</style></head><body><h1>\uD83C\uDFD3 \u52A8\u4F5C\u5BF9\u6BD4\u5206\u6790\u62A5\u544A</h1><p>\u52A8\u4F5C\u7C7B\u578B\uFF1A' + result.motionName + ' | \u5206\u6790\u65F6\u95F4\uFF1A' + dateStr + '</p><h2>\u7EFC\u5408\u8BC4\u5206</h2><div style="font-size:64px;font-weight:900;color:' + (result.overallScore >= 80 ? '#30D158' : result.overallScore >= 60 ? '#007AFF' : '#FF9F0A') + ';text-align:center;margin:20px 0">' + result.overallScore + '<span style="font-size:20px;color:#999">/100</span></div><h2>\u7EF4\u5EA6\u8BC4\u5206</h2><div style="text-align:center">' + dimHtml + '</div><h2>\u8C03\u6574\u5EFA\u8BAE</h2>' + (adviceHtml || '<p>\u52A8\u4F5C\u975E\u5E38\u89C4\u8303\uFF0C\u7EE7\u7EED\u4FDD\u6301\uFF01</p>') + '<hr style="margin:30px 0;border:1px solid #eee"><p style="font-size:12px;color:#999;text-align:center">\u672C\u62A5\u544A\u7531\u4E52\u4E53\u7403 AI \u6559\u5B66\u7CFB\u7EDF\u81EA\u52A8\u751F\u6210\uFF0C\u4EC5\u4F9B\u53C2\u8003</p></body></html>';
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '\u52A8\u4F5C\u5BF9\u6BD4\u62A5\u544A_' + result.motionName + '_' + new Date().toISOString().split('T')[0] + '.html';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    showToast('\u62A5\u544A\u5DF2\u5BFC\u51FA', 'success');
+  }
+}
+
+// ========== INIT ==========
+let motionCompareUI;
+document.addEventListener('DOMContentLoaded', () => {
+  renderTrainingList();
+  updateDashboardStats();
+  initDashboardCharts();
+  motionCompareUI = new MotionCompareUI();
+});
+</script>
+</body>
+</html>
