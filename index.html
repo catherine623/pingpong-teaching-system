@@ -930,7 +930,37 @@
           <label class="form-label">备注</label>
           <textarea class="form-textarea" id="form-note" placeholder="训练心得..."></textarea>
         </div>
+        <div class="form-group">
+          <label class="form-label">训练录像</label>
+          <div id="training-video-upload-area" style="border:2px dashed rgba(255,255,255,0.15);border-radius:14px;padding:20px;text-align:center;transition:all 0.3s;cursor:pointer;background:rgba(255,255,255,0.02)" onclick="document.getElementById('form-training-video').click()" onmouseover="this.style.borderColor='rgba(0,122,255,0.5)';this.style.background='rgba(0,122,255,0.05)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)';this.style.background='rgba(255,255,255,0.02)'">
+            <div id="training-video-placeholder">
+              <i class="fa-solid fa-video" style="font-size:28px;color:rgba(255,255,255,0.3);margin-bottom:8px;display:block"></i>
+              <p style="color:rgba(255,255,255,0.4);margin:0;font-size:13px">点击上传训练录像</p>
+              <p style="color:rgba(255,255,255,0.25);margin:4px 0 0;font-size:11px">支持 MP4、WebM、MOV，最大 200MB</p>
+            </div>
+            <div id="training-video-preview" style="display:none">
+              <video id="training-video-thumb" controls style="max-width:100%;max-height:180px;border-radius:10px;display:block;margin:0 auto 8px"></video>
+              <p id="training-video-name" style="color:rgba(255,255,255,0.6);margin:0;font-size:12px"></p>
+              <button type="button" class="btn btn-outline" style="margin-top:8px;padding:6px 16px;font-size:12px" onclick="event.stopPropagation();clearTrainingVideo()"><i class="fa-solid fa-trash-can"></i> 移除录像</button>
+            </div>
+          </div>
+          <input type="file" id="form-training-video" accept="video/mp4,video/webm,video/quicktime,video/x-msvideo" style="display:none" onchange="handleTrainingVideoSelect(event)" />
+        </div>
         <button class="btn btn-primary" style="width:100%" onclick="saveTraining()"><i class="fa-solid fa-check"></i> 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO PLAYER MODAL -->
+  <div class="modal-overlay" id="modal-video-player">
+    <div class="modal" style="max-width:700px">
+      <div class="modal-header">
+        <h3 id="video-player-title"><i class="fa-solid fa-video"></i> 训练录像</h3>
+        <button class="modal-close" onclick="closeModal('modal-video-player')"><i class="fa-solid fa-times"></i></button>
+      </div>
+      <div class="modal-body" style="padding:16px">
+        <video id="training-video-player" controls style="width:100%;border-radius:12px;background:#000;max-height:450px;display:block;margin:0 auto"></video>
+        <p id="video-player-info" style="color:rgba(255,255,255,0.4);margin-top:10px;text-align:center;font-size:12px"></p>
       </div>
     </div>
   </div>
@@ -1175,6 +1205,74 @@ function navigateTo(page) {
 function showAddTrainingModal() {
   document.getElementById('form-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('modal-add-training').classList.add('show');
+  // Reset video upload state
+  clearTrainingVideo();
+}
+
+// Training Video Upload Handlers
+let _trainingVideoFile = null;
+let _trainingVideoDataURL = null;
+
+function handleTrainingVideoSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+  if (!validTypes.includes(file.type)) {
+    showToast('请上传有效的视频文件（MP4/WebM/MOV）', 'error');
+    return;
+  }
+  if (file.size > 200 * 1024 * 1024) {
+    showToast('视频文件不能超过 200MB', 'error');
+    return;
+  }
+
+  _trainingVideoFile = file;
+  const url = URL.createObjectURL(file);
+
+  document.getElementById('training-video-placeholder').style.display = 'none';
+  document.getElementById('training-video-preview').style.display = 'block';
+  const thumb = document.getElementById('training-video-thumb');
+  thumb.src = url;
+  document.getElementById('training-video-name').textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+
+  // Store as data URL for localStorage persistence
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    _trainingVideoDataURL = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearTrainingVideo() {
+  _trainingVideoFile = null;
+  _trainingVideoDataURL = null;
+  const input = document.getElementById('form-training-video');
+  if (input) input.value = '';
+  document.getElementById('training-video-placeholder').style.display = 'block';
+  document.getElementById('training-video-preview').style.display = 'none';
+  const thumb = document.getElementById('training-video-thumb');
+  if (thumb) { thumb.src = ''; URL.revokeObjectURL(thumb.src); }
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function playTrainingVideo(recordId) {
+  const records = getRecords();
+  const record = records.find(r => r.id === recordId);
+  if (!record || !record.hasVideo || !record.videoDataUrl) {
+    showToast('未找到录像文件', 'error');
+    return;
+  }
+  document.getElementById('video-player-title').innerHTML = '<i class="fa-solid fa-video"></i> 训练录像 — ' + record.content;
+  const player = document.getElementById('training-video-player');
+  player.src = record.videoDataUrl;
+  document.getElementById('video-player-info').textContent = record.videoName + ' · ' + formatFileSize(record.videoSize);
+  document.getElementById('modal-video-player').classList.add('show');
 }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
@@ -1185,8 +1283,20 @@ function saveTraining() {
   const score = parseInt(document.getElementById('form-score').value) || 0;
   const note = document.getElementById('form-note').value;
   if (!date || !content) { showToast('请填写日期和内容', 'error'); return; }
+  const record = {
+    id: 'r' + Date.now(),
+    date, content, duration, score: Math.min(100, Math.max(0, score)), note, tags: []
+  };
+  // Attach video if uploaded
+  if (_trainingVideoFile && _trainingVideoDataURL) {
+    record.hasVideo = true;
+    record.videoName = _trainingVideoFile.name;
+    record.videoSize = _trainingVideoFile.size;
+    record.videoType = _trainingVideoFile.type;
+    record.videoDataUrl = _trainingVideoDataURL;
+  }
   const records = getRecords();
-  records.unshift({ id: 'r' + Date.now(), date, content, duration, score: Math.min(100, Math.max(0, score)), note, tags: [] });
+  records.unshift(record);
   saveRecords(records);
   closeModal('modal-add-training');
   showToast('训练记录已保存', 'success');
@@ -1203,10 +1313,12 @@ function renderTrainingList() {
     const d = new Date(r.date);
     const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
     const scoreClass = r.score >= 80 ? 'score-excellent' : r.score >= 60 ? 'score-good' : r.score >= 40 ? 'score-average' : 'score-poor';
+    const videoBadge = r.hasVideo ? '<span class="tag" style="background:rgba(0,122,255,0.2);color:#007AFF;cursor:pointer" onclick="playTrainingVideo(\'' + r.id + '\')"><i class="fa-solid fa-play"></i> 播放录像</span>' : '';
     return '<div class="training-card">' +
       '<div class="training-date"><div class="day">' + d.getDate() + '</div><div class="month">' + months[d.getMonth()] + '</div></div>' +
       '<div class="training-info"><h3>' + r.content + '</h3><p>' + (r.note || '') + '</p>' +
-      '<div class="training-tags">' + (r.tags || []).map(t => '<span class="tag primary">' + t + '</span>').join('') +
+      '<div class="training-tags">' + videoBadge +
+      (r.tags || []).map(t => '<span class="tag primary">' + t + '</span>').join('') +
       '<span class="tag">' + r.duration + '分钟</span></div></div>' +
       '<div class="training-score"><div class="stat-value ' + scoreClass + '" style="font-size:28px">' + r.score + '</div><div class="stat-label">AI评分</div></div></div>';
   }).join('');
