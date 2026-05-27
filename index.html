@@ -536,12 +536,230 @@
       .grid-4 { grid-template-columns: repeat(2, 1fr); }
       .motion-compare-layout { grid-template-columns: 1fr; }
     }
+
+    /* ===== MOBILE (< 768px) ===== */
     @media (max-width: 768px) {
-      .sidebar { transform: translateX(-100%); }
-      .sidebar.open { transform: translateX(0); }
+      :root { --radius: 12px; --radius-lg: 16px; --sidebar-w: 280px; }
+
+      /* Sidebar → overlay drawer */
+      .sidebar { transform: translateX(-100%); width: var(--sidebar-w); z-index: 1000; }
+      .sidebar.open { transform: translateX(0); box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+
+      /* Sidebar overlay backdrop */
+      .sidebar-overlay {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+        z-index: 999; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      }
+      .sidebar-overlay.show { display: block; }
+
       .main { margin-left: 0; }
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
-      .grid-4 { grid-template-columns: 1fr 1fr; }
+
+      /* Topbar */
+      .topbar { padding: 0 16px; height: 52px; }
+      .topbar-title { font-size: 16px; }
+
+      /* Hamburger menu btn (shown only mobile) */
+      .mobile-menu-btn {
+        display: flex !important; width: 36px; height: 36px;
+        align-items: center; justify-content: center;
+        border-radius: 10px; background: rgba(255,255,255,0.08);
+        color: var(--text); border: none; cursor: pointer;
+        font-size: 16px; transition: all 0.2s; flex-shrink: 0;
+      }
+      .mobile-menu-btn:active { background: rgba(0,122,255,0.2); transform: scale(0.95); }
+
+      /* Hide desktop-only topbar 新增训练 btn on small screens (use FAB instead) */
+      .topbar .btn-primary.mobile-hide-btn { display: none !important; }
+      /* Hide training page inline 新增训练 btn on mobile (FAB replaces it) */
+      .desktop-only-btn { display: none !important; }
+
+      /* Content padding */
+      .content { padding: 16px; padding-bottom: 90px !important; } /* space for tab bar */
+
+      /* All grids single column */
+      .grid-2, .grid-3 { grid-template-columns: 1fr; gap: 14px; }
+      .grid-4 { grid-template-columns: 1fr 1fr; gap: 12px; }
+
+      /* Cards - less padding, no hover lift */
+      .card { padding: 16px; border-radius: var(--radius); margin-bottom: 2px; }
+      .card:hover { transform: none; box-shadow: var(--shadow); }
+      .stat-card { padding: 16px; border-radius: var(--radius); }
+      .stat-card:hover { transform: none; box-shadow: var(--shadow); }
+      .course-card { padding: 16px; border-radius: var(--radius); }
+      .training-card { padding: 14px; gap: 12px; border-radius: var(--radius); }
+      .training-card:hover { transform: none; box-shadow: var(--shadow); }
+
+      /* Welcome banner compact */
+      .welcome-banner { padding: 20px; border-radius: var(--radius-lg); margin-bottom: 16px; }
+      .welcome-banner h2 { font-size: 18px; }
+      .welcome-banner p { font-size:13px; }
+      .welcome-stats { gap: 20px; }
+      .welcome-stat strong { font-size: 20px; }
+
+      /* Stat values smaller */
+      .stat-value { font-size: 26px; }
+      .stat-icon { width: 40px; height: 40px; font-size: 18px; border-radius: 10px; }
+
+      /* Page titles */
+      h2[style*="font-size:20px"] { font-size: 18px !important; }
+
+      /* Buttons - larger touch targets (min 44px) */
+      .btn {
+        padding: 11px 18px; border-radius: 12px; font-size: 14px;
+        min-height: 44px; min-width: 44px;
+      }
+      .btn i { font-size: 14px; }
+
+      /* Training card date block compact */
+      .training-date { padding: 8px 10px; min-width: 52px; border-radius: 8px; }
+      .training-date .day { font-size: 20px; }
+      .training-date .month { font-size: 10px; }
+      .training-info h3 { font-size: 14px; }
+      .training-info p { font-size: 12px; }
+
+      /* Tags slightly larger for tapping */
+      .tag { font-size: 11px; padding: 4px 10px; border-radius: 16px; min-height: 26px; display: inline-flex; align-items: center; }
+
+      /* Motion compare controls - wrap */
+      .motion-controls { flex-wrap: wrap; gap: 8px !important; }
+      .motion-controls .btn { font-size: 12px; padding: 9px 14px; min-height: 40px; }
+
+      /* Modal - full-screen on mobile */
+      .modal-overlay .modal {
+        margin: 0 auto; width: 100% !important; max-width: 100% !important;
+        border-radius: 20px 20px 0 0; max-height: 92vh;
+        position: absolute; bottom: 0; left: 0; right: 0;
+        animation: slideUp 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+      }
+      @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+      .modal-header { padding: 18px 20px 14px; }
+      .modal-body { padding: 16px 20px 24px; overflow-y: auto; max-height: calc(92vh - 60px); -webkit-overflow-scrolling: touch; }
+      .modal-close { width: 32px; height: 32px; font-size: 16px; }
+
+      /* Form inputs larger */
+      .form-input, .form-textarea, .form-select {
+        padding: 12px 14px; font-size: 16px !important; /* prevent iOS zoom */
+        border-radius: 12px; min-height: 48px;
+      }
+      .form-textarea { min-height: 80px; }
+      .form-label { font-size: 13px; margin-bottom: 6px; }
+
+      /* Chart containers shorter */
+      .chart-container { min-height: 200px; }
+
+      /* Course card adjustments */
+      .course-header { gap: 10px; }
+      .course-title { font-size: 14px; }
+      .course-desc { font-size: 12px; line-height: 1.5; }
+
+      /* Activity items */
+      .activity-item { padding: 12px 0; }
+      .activity-text { font-size: 13px; }
+
+      /* Empty states */
+      .empty-state { padding: 40px 20px; }
+      .empty-state h3 { font-size: 17px; }
+      .empty-state p { font-size: 13px; }
+
+      /* Motion selector grid - 2 cols on mobile */
+      .motion-selector-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+      }
+      .motion-option { padding: 10px 12px !important; font-size: 13px !important; border-radius: 10px !important; min-height: 44px; display:flex; align-items:center; justify-content:center; text-align:center; }
+
+      /* Standard video tabs */
+      #standard-skeleton-panel .motion-video-container,
+      #standard-video-panel > .motion-video-container { aspect-ratio: 4/3; border-radius: 12px; }
+
+      /* Video player modal full screen */
+      #modal-video-player .modal {
+        border-radius: 16px;
+      }
+      #modal-video-player video { max-height: 300px; }
+
+      /* Toast */
+      .toast { font-size: 13px; padding: 12px 20px; border-radius: 12px; }
+
+      /* Progress ring smaller */
+      .progress-ring svg { width: 80px; height: 80px; }
+      .ring-value { font-size: 22px; }
+
+      /* Score ring in motion compare */
+      .motion-score-ring { width: 120px; height: 120px; }
+      .score-number { font-size: 28px; }
+
+      /* Hide sidebar footer user card on mobile (redundant) */
+      .sidebar-footer { display: none; }
+
+      /* Nav items larger tap area */
+      .nav-item { padding: 13px 24px; font-size: 15px; min-height: 50px; }
+      .nav-item i { font-size: 17px; width: 22px; }
+    }
+
+    /* Extra small phones (< 400px) */
+    @media (max-width: 400px) {
+      .grid-4 { grid-template-columns: 1fr; gap: 10px; }
+      .stat-value { font-size: 22px; }
+      .welcome-stats { gap: 14px; flex-wrap: wrap; }
+      .welcome-stat strong { font-size: 18px; }
+      .motion-selector-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+    }
+
+    /* ===== BOTTOM TAB BAR (Mobile Only) ===== */
+    .bottom-tab-bar {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      z-index: 900; background: rgba(28,28,30,0.94);
+      backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 4px 0 env(safe-area-inset-bottom, 0);
+      padding-bottom: calc(4px + env(safe-area-inset-bottom, 8px));
+    }
+    .bottom-tab-bar-inner {
+      display: flex; justify-content: space-around; align-items: flex-start;
+      max-width: 500px; margin: 0 auto; padding: 0 2px; overflow-x: auto;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .bottom-tab-bar-inner::-webkit-scrollbar { display: none; }
+    .tab-item {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 5px 4px 3px; min-width: 48px; cursor: pointer;
+      border-radius: 10px; transition: all 0.2s;
+      color: var(--text-muted); text-decoration: none; -webkit-tap-highlight-color: transparent;
+      position: relative; flex-shrink: 0;
+    }
+    .tab-item:active { transform: scale(0.92); }
+    .tab-item i { font-size: 21px; margin-bottom: 2px; height: 24px; display: flex; align-items: center; justify-content: center; }
+    .tab-item span { font-size: 10px; font-weight: 500; letter-spacing: 0.3px; white-space: nowrap; }
+    .tab-item.active { color: var(--primary); }
+    .tab-item.active i { color: var(--primary); }
+    .tab-item.active::after {
+      content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+      width: 20px; height: 3px; background: var(--primary); border-radius: 0 0 3px 3px;
+    }
+
+    @media (max-width: 768px) {
+      .bottom-tab-bar { display: block; }
+    }
+
+    /* ===== FLOATING ACTION BUTTON (FAB) for Training Page ===== */
+    .fab-add-training {
+      display: none; position: fixed; bottom: 78px; right: 18px;
+      z-index: 800; width: 56px; height: 56px;
+      border-radius: 50%; border: none;
+      background: linear-gradient(135deg, var(--primary), #4DA3FF);
+      color: white; font-size: 24px; cursor: pointer;
+      box-shadow: 0 6px 24px rgba(0,122,255,0.45), 0 2px 8px rgba(0,0,0,0.3);
+      transition: all 0.25s cubic-bezier(0.25,0.46,0.45,0.94);
+      -webkit-tap-highlight-color: transparent;
+      align-items: center; justify-content: center;
+    }
+    .fab-add-training:active { transform: scale(0.9); box-shadow: 0 2px 12px rgba(0,122,255,0.35), 0 1px 4px rgba(0,0,0,0.3); }
+    .fab-add-training i { pointer-events: none; }
+
+    @media (max-width: 768px) {
+      .fab-add-training.show { display: flex; }
     }
   </style>
 </head>
@@ -587,12 +805,18 @@
     </div>
   </aside>
 
+  <!-- Sidebar Overlay (mobile only) -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleMobileSidebar()"></div>
+
   <!-- MAIN -->
   <div class="main">
     <header class="topbar">
-      <div class="topbar-title" id="topbar-title">仪表盘</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="打开菜单"><i class="fa-solid fa-bars"></i></button>
+        <div class="topbar-title" id="topbar-title">仪表盘</div>
+      </div>
       <div class="topbar-actions">
-        <button class="btn btn-primary" onclick="showAddTrainingModal()">
+        <button class="btn btn-primary mobile-hide-btn" onclick="showAddTrainingModal()">
           <i class="fa-solid fa-plus"></i> 新增训练
         </button>
       </div>
@@ -659,7 +883,7 @@
             <h2 style="font-size:20px;font-weight:900">训练记录</h2>
             <p style="font-size:13px;color:var(--text-muted);margin-top:4px">记录每一次挥拍的进步</p>
           </div>
-          <button class="btn btn-primary" onclick="showAddTrainingModal()"><i class="fa-solid fa-plus"></i> 新增训练</button>
+          <button class="btn btn-primary desktop-only-btn" onclick="showAddTrainingModal()"><i class="fa-solid fa-plus"></i> 新增训练</button>
         </div>
         <div id="training-list"></div>
       </div>
@@ -930,6 +1154,23 @@
 
     </div>
   </div>
+
+  <!-- BOTTOM TAB BAR (Mobile) -->
+  <nav class="bottom-tab-bar" id="bottom-tab-bar">
+    <div class="bottom-tab-bar-inner">
+      <a class="tab-item active" data-page="dashboard" onclick="navigateTo('dashboard')"><i class="fa-solid fa-chart-line"></i><span>首页</span></a>
+      <a class="tab-item" data-page="training" onclick="navigateTo('training')"><i class="fa-solid fa-clipboard-list"></i><span>训练</span></a>
+      <a class="tab-item" data-page="analysis" onclick="navigateTo('analysis')"><i class="fa-solid fa-brain"></i><span>分析</span></a>
+      <a class="tab-item" data-page="progress" onclick="navigateTo('progress')"><i class="fa-solid fa-chart-pie"></i><span>成长</span></a>
+      <a class="tab-item" data-page="course" onclick="navigateTo('course')"><i class="fa-solid fa-graduation-cap"></i><span>课程</span></a>
+      <a class="tab-item" data-page="compare" onclick="navigateTo('compare')"><i class="fa-solid fa-arrows-left-right"></i><span>对比</span></a>
+    </div>
+  </nav>
+
+  <!-- FAB: 新增训练 (Mobile only) -->
+  <button class="fab-add-training" id="fab-add-training" onclick="showAddTrainingModal()" aria-label="新增训练">
+    <i class="fa-solid fa-plus"></i>
+  </button>
 
   <!-- ADD TRAINING MODAL -->
   <div class="modal-overlay" id="modal-add-training">
@@ -1337,10 +1578,39 @@ function navigateTo(page) {
   const nav = document.querySelector('.nav-item[data-page="' + page + '"]');
   if (nav) nav.classList.add('active');
   document.getElementById('topbar-title').textContent = pageTitles[page] || '';
+
+  // Update bottom tab bar active state (mobile)
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  const tabItem = document.querySelector('.tab-item[data-page="' + page + '"]');
+  if (tabItem) tabItem.classList.add('active');
+
+  // FAB visibility - only show on training page
+  const fab = document.getElementById('fab-add-training');
+  if (fab) { fab.classList.toggle('show', page === 'training'); }
+
+  // Close mobile sidebar after navigation
+  closeMobileSidebar();
+
   if (page === 'compare' && motionCompareUI) motionCompareUI.onPageEnter();
   if (page === 'dashboard') initDashboardCharts();
   if (page === 'analysis') initAnalysisCharts();
   if (page === 'progress') initProgressCharts();
+}
+
+// ========== MOBILE SIDEBAR ==========
+function toggleMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  const isOpen = sb.classList.contains('open');
+  if (isOpen) { closeMobileSidebar(); }
+  else { sb.classList.add('open'); ov.classList.add('show'); document.body.style.overflow = 'hidden'; }
+}
+function closeMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  sb.classList.remove('open');
+  ov.classList.remove('show');
+  document.body.style.overflow = '';
 }
 
 // ========== MODAL ==========
