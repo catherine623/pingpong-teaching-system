@@ -1,13 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>乒乓球 AI 教学系统</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- 国内可访问字体CDN：lf3-cdn-tos.bytecdntp.com (字节跳动CDN，国内高速) -->
+  <link rel="stylesheet" href="https://lf3-cdn-tos.bytecdntp.com/cdn/expire-1-M/font-awesome/6.5.1/css/all.min.css"
+        onerror="this.onerror=null;this.href='https://cdn.bootcdn.net/ajax/libs/font-awesome/6.5.1/css/all.min.css';" />
+  <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"
+        onerror="this.onerror=null;console.warn('Chart.js加载失败，图表功能不可用');"></script>
   <style>
     :root {
       --primary: #007AFF;
@@ -41,7 +43,7 @@
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: -apple-system, 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
@@ -1534,7 +1536,7 @@ function loadStandardVideo(motionKey) {
   const infoPanel = document.getElementById('standard-video-info');
 
   // Build YouTube embed URL with start time
-  const embedUrl = 'https://www.youtube.com/embed/' + vinfo.videoId +
+  const embedUrl = 'https://www.youtube-nocookie.com/embed/' + vinfo.videoId +
     '?start=' + vinfo.start + '&end=' + vinfo.end +
     '&autoplay=0&rel=0&modestbranding=1&playsinline=1&controls=1';
 
@@ -1547,6 +1549,23 @@ function loadStandardVideo(motionKey) {
   document.getElementById('standard-video-desc').textContent = vinfo.desc;
   document.getElementById('standard-video-link').href =
     'https://www.youtube.com/watch?v=' + vinfo.videoId + '&t=' + vinfo.start + 's';
+
+  // YouTube在国内可能无法访问，10秒后检测是否加载成功
+  setTimeout(() => {
+    if (iframe.style.display !== 'none') {
+      // iframe仍在显示，尝试检测是否真的加载了内容
+      // 如果网络不通，iframe会保持空白但不会触发error事件
+      // 通过在iframe后插入提示文字来提醒用户
+      const parent = iframe.parentElement;
+      if (parent && !parent.querySelector('.video-fallback-tip')) {
+        const tip = document.createElement('div');
+        tip.className = 'video-fallback-tip';
+        tip.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:var(--warning)"></i> 若视频无法播放，可能是网络环境限制（YouTube需科学上网）<br><span style="font-size:12px;color:var(--text-muted)">建议：使用WiFi+VPN，或在电脑端观看示范视频</span>';
+        tip.style.cssText = 'padding:12px;background:rgba(255,159,10,0.1);border-radius:8px;text-align:center;font-size:13px;margin-top:8px;border:1px solid rgba(255,159,10,0.2);';
+        parent.insertBefore(tip, infoPanel);
+      }
+    }
+  }, 8000);
 }
 
 // ========== LOCAL STORAGE ==========
@@ -1893,23 +1912,37 @@ class MotionCamera {
       await video.play();
       this.isRunning = true;
 
-      // Try to load MediaPipe
-      try {
-        const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14');
-        const { PoseLandmarker, FilesetResolver } = vision;
-        const filesetResolver = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
-        this.poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
-          runningMode: 'VIDEO',
-          numPoses: 1,
-          minPoseDetectionConfidence: 0.5,
-          minPosePresenceConfidence: 0.5,
-          minTrackingConfidence: 0.5
-        });
-        this._detectLoop();
-      } catch (err) {
-        console.warn('MediaPipe Pose 加载失败，摄像头已开启但无骨骼检测:', err);
+      // Try to load MediaPipe (multiple CDN fallbacks for China network)
+      const MEDIAPIPE_CDNS = [
+        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',
+        'https://unpkg.com/@mediapipe/tasks-vision@0.10.14',
+        'https://esm.sh/@mediapipe/tasks-vision@0.10.14'
+      ];
+      let visionLoaded = false;
+      for (const cdnBase of MEDIAPIPE_CDNS) {
+        try {
+          const vision = await import(cdnBase);
+          const { PoseLandmarker, FilesetResolver } = vision;
+          const filesetResolver = await FilesetResolver.forVisionTasks(cdnBase + '/wasm');
+          this.poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+            runningMode: 'VIDEO',
+            numPoses: 1,
+            minPoseDetectionConfidence: 0.5,
+            minPosePresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5
+          });
+          visionLoaded = true;
+          break;
+        } catch (e) {
+          console.warn('MediaPipe CDN尝试失败:', cdnBase, e.message);
+          continue;
+        }
       }
-
+      if (!visionLoaded) {
+        console.warn('所有MediaPipe CDN均失败，摄像头已开启但无骨骼检测');
+      } else {
+        this._detectLoop();
+      }
       document.getElementById('btn-camera').innerHTML = '<i class="fa-solid fa-camera-slash"></i> 关闭摄像头';
       document.getElementById('btn-record').disabled = false;
     } catch (err) {
@@ -2007,23 +2040,35 @@ class VideoUploader {
 
   async loadPoseModel() {
     if (this.poseLandmarker) return;
-    try {
-      showToast('正在加载 AI 模型...', '');
-      const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14');
-      const { PoseLandmarker, FilesetResolver } = vision;
-      const filesetResolver = await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm');
-      this.poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
-        runningMode: 'VIDEO',
-        numPoses: 1,
-        minPoseDetectionConfidence: 0.5,
-        minPosePresenceConfidence: 0.5,
-        minTrackingConfidence: 0.5
-      });
-      showToast('AI 模型加载完成', 'success');
-    } catch (err) {
-      console.error('MediaPipe 加载失败:', err);
-      throw new Error('AI 模型加载失败: ' + err.message);
+    // Multiple CDN fallbacks for China network compatibility
+    const MEDIAPIPE_CDNS = [
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',
+      'https://unpkg.com/@mediapipe/tasks-vision@0.10.14',
+      'https://esm.sh/@mediapipe/tasks-vision@0.10.14'
+    ];
+    let loaded = false;
+    for (const cdnBase of MEDIAPIPE_CDNS) {
+      try {
+        showToast('正在加载 AI 模型...', '');
+        const vision = await import(cdnBase);
+        const { PoseLandmarker, FilesetResolver } = vision;
+        const filesetResolver = await FilesetResolver.forVisionTasks(cdnBase + '/wasm');
+        this.poseLandmarker = await PoseLandmarker.createFromOptions(filesetResolver, {
+          runningMode: 'VIDEO',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5
+        });
+        loaded = true;
+        showToast('AI 模型加载完成', 'success');
+        return;
+      } catch (e) {
+        console.warn('MediaPipe CDN尝试失败:', cdnBase, e.message);
+        continue;
+      }
     }
+    throw new Error('所有CDN均无法访问，请检查网络连接（可能需要VPN）');
   }
 
   async analyzeVideo(videoElement, onProgress) {
@@ -2788,3 +2833,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+fix: 替换被墙CDN为国内可访问源，修复iPhone无法打开页面
